@@ -36,9 +36,7 @@ func wrapPosition(obj *js.Object) *Position {
 	return pos
 }
 
-func CurrentPosition(options map[string]interface{}) (*Position, error) {
-	var pos *Position
-	var err error
+func CurrentPosition(options map[string]interface{}) (pos *Position, err error) {
 	ch := make(chan struct{})
 	success := func(obj *js.Object) {
 		pos = wrapPosition(obj)
@@ -51,7 +49,7 @@ func CurrentPosition(options map[string]interface{}) (*Position, error) {
 
 	js.Global.Get("navigator").Get("geolocation").Call("getCurrentPosition", success, fail, options)
 	<-ch
-	return pos, err
+	return
 }
 
 func NewWatcher(cb func(pos *Position, err error), options map[string]interface{}) *Watcher {
