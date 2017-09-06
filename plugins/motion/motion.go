@@ -2,16 +2,16 @@ package motion
 
 import (
 	"errors"
-	"time"
 
 	"github.com/gopherjs/gopherjs/js"
 )
 
 type Acceleration struct {
-	X         float64
-	Y         float64
-	Z         float64
-	Timestamp time.Time
+	*js.Object
+	X         float64 `js:"x"`
+	Y         float64 `js:"y"`
+	Z         float64 `js:"z"`
+	Timestamp int64   `js:"timestamp"`
 }
 
 type Watcher struct {
@@ -19,10 +19,7 @@ type Watcher struct {
 }
 
 func wrapAcceleration(obj *js.Object) *Acceleration {
-	acc := &Acceleration{X: obj.Get("x").Float(), Y: obj.Get("y").Float(), Z: obj.Get("z").Float()}
-	uts := obj.Get("timestamp").Int64()
-	acc.Timestamp = time.Unix(uts/1000, (uts%1000)*1000000)
-	return acc
+	return &Acceleration{Object: obj}
 }
 
 func CurrentAcceleration() (acc *Acceleration, err error) {

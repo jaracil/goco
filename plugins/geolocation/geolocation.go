@@ -2,7 +2,6 @@ package geolocation
 
 import (
 	"errors"
-	"time"
 
 	"github.com/gopherjs/gopherjs/js"
 )
@@ -20,8 +19,10 @@ type Coords struct {
 }
 
 type Position struct {
-	Coords    *Coords
-	Timestamp time.Time
+	*js.Object
+
+	Coords    Coords `js:"coords"`
+	Timestamp int64  `js:"timestamp"`
 }
 
 type Watcher struct {
@@ -29,11 +30,7 @@ type Watcher struct {
 }
 
 func wrapPosition(obj *js.Object) *Position {
-	pos := &Position{}
-	uts := obj.Get("timestamp").Int64()
-	pos.Timestamp = time.Unix(uts/1000, (uts%1000)*1000000)
-	pos.Coords = &Coords{Object: obj.Get("coords")}
-	return pos
+	return &Position{Object: obj}
 }
 
 func CurrentPosition(options map[string]interface{}) (pos *Position, err error) {
