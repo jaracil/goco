@@ -5,7 +5,8 @@ import (
 )
 
 var (
-	singleton *DeviceInfo
+	singleton   *DeviceInfo
+	deviceReady = false
 )
 
 type DeviceInfo struct {
@@ -32,8 +33,20 @@ func Info() *DeviceInfo {
 	return singleton
 }
 
+func IsReady() bool {
+	return deviceReady
+}
+
 func WaitReady() {
+	if deviceReady {
+		return
+	}
 	ch := make(chan struct{}, 0)
-	js.Global.Get("document").Call("addEventListener", "deviceready", func() { close(ch) }, false)
+	f := func() {
+		close(ch)
+	}
+	js.Global.Get("document").Call("addEventListener", "deviceready", f, false)
 	<-ch
+	deviceReady = true
+	js.Global.Get("document").Call("removeEventListener", "deviceready", f, false)
 }
