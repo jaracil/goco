@@ -2,6 +2,7 @@ package netinfo
 
 import (
 	"github.com/gopherjs/gopherjs/js"
+	"github.com/jaracil/goco/plugins/device"
 )
 
 const (
@@ -15,19 +16,31 @@ const (
 	Cell5gType   = "5G"
 )
 
-func Type() string {
-	return js.Global.Get("navigator").Get("connection").Get("type").String()
+type ActualKind struct {
+	*js.Object
+	Kind string `js:"type"`
+}
+type PosibleKinds struct {
+	*js.Object
+	Unknown  string `js:"UNKNOWN"`
+	Ethernet string `js:"ETHERNET"`
+	Wifi     string `js:"WIFI"`
+	Cell2G   string `js:"CELL_2G"`
+	Cell3G   string `js:"CELL_3G"`
+	Cell4G   string `js:"CELL_4G"`
+	Cell     string `js:"CELL"`
+	None     string `js:"NONE"`
+}
+
+var Current *ActualKind
+var Kinds *PosibleKinds
+
+func init() {
+	device.WaitReady()
+	Current = &ActualKind{Object: js.Global.Get("navigator").Get("connection")}
+	Kinds = &PosibleKinds{Object: js.Global.Get("Connection")}
 }
 
 func IsCell() bool {
-	t := Type()
-	return t == Cell2gType || t == Cell3gType || t == Cell4gType || t == Cell5gType || t == CellType
-}
-
-func OnOnline(fn func()) {
-	js.Global.Get("document").Call("addEventListener", "online", fn, false)
-}
-
-func OnOffline(fn func()) {
-	js.Global.Get("document").Call("addEventListener", "offline", fn, false)
+	return Current.Kind == Kinds.Cell || Current.Kind == Kinds.Cell2G || Current.Kind == Kinds.Cell3G || Current.Kind == Kinds.Cell4G
 }
