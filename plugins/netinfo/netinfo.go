@@ -9,7 +9,7 @@ type ActualKind struct {
 	*js.Object
 	Kind string `js:"type"`
 }
-type PosibleKinds struct {
+type AvailableKinds struct {
 	*js.Object
 	Unknown  string `js:"UNKNOWN"`
 	Ethernet string `js:"ETHERNET"`
@@ -22,12 +22,12 @@ type PosibleKinds struct {
 }
 
 var Current *ActualKind
-var Kinds *PosibleKinds
+var Kinds *AvailableKinds
 
 func init() {
 	device.WaitReady()
 	Current = &ActualKind{Object: js.Global.Get("navigator").Get("connection")}
-	Kinds = &PosibleKinds{Object: js.Global.Get("Connection")}
+	Kinds = &AvailableKinds{Object: js.Global.Get("Connection")}
 }
 
 func IsCell() bool {
