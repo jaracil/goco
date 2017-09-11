@@ -5,17 +5,6 @@ import (
 	"github.com/jaracil/goco/plugins/device"
 )
 
-const (
-	NoneType     = "NONE"
-	EthernetType = "ETHERNET"
-	WifiType     = "WIFI"
-	CellType     = "CELLULAR"
-	Cell2gType   = "2G"
-	Cell3gType   = "3G"
-	Cell4gType   = "4G"
-	Cell5gType   = "5G"
-)
-
 type ActualKind struct {
 	*js.Object
 	Kind string `js:"type"`
