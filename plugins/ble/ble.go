@@ -6,38 +6,44 @@ import (
 	"github.com/gopherjs/gopherjs/js"
 )
 
-type AdvData struct {
-	*js.Object
-}
-
-type ScanData struct {
-	*js.Object
-	Name        string  `js:"Name"`
-	ID          string  `js:"id"`
-	Advertising AdvData `js:"advertising"`
-	Rssi        int     `js:"rssi"`
-}
-
 var (
-	wantScan = false
-	scaning  = false
+	// Status flags
+	wantScan   = false
+	scaning    = false
+	connecting = 0
+
+	// Scan Params
+	scanSrv   []string
+	scanCbFun func(*Peripheral)
+	scanDups  bool
 )
 
-func startScan(srv []string, cbFun func(*ScanData), dups bool) {
+func startScan(srv []string, cbFun func(*Peripheral), dups bool) {
 	if scaning {
 		return
 	}
 	cb := func(obj *js.Object) {
-		cbFun(&ScanData{Object: obj})
+		if cbFun != nil {
+			cbFun(&Peripheral{o: obj})
+		}
 	}
 	options := map[string]interface{}{"reportDuplicates": dups}
 	js.Global.Get("ble").Call("startScanWithOptions", srv, options, cb)
 	scaning = true
 }
 
-func StartScan(srv []string, cbFun func(*ScanData), dups bool) {
+func resumeScan() {
+	if wantScan && connecting == 0 {
+		startScan(scanSrv, scanCbFun, scanDups)
+	}
+}
+
+func StartScan(srv []string, cbFun func(*Peripheral), dups bool) {
+	scanSrv = srv
+	scanCbFun = cbFun
+	scanDups = dups
 	wantScan = true
-	startScan(srv, cbFun, dups)
+	resumeScan()
 }
 
 func stopScan() (err error) {
@@ -61,4 +67,45 @@ func stopScan() (err error) {
 func StopScan() (err error) {
 	wantScan = false
 	return stopScan()
+}
+
+func Connect(id string, endConnCb func(per *Peripheral)) (per *Peripheral, err error) {
+	ch := make(chan struct{})
+	connected := false
+	success := func(obj *js.Object) {
+		per = &Peripheral{o: obj}
+		connected = true
+		close(ch)
+	}
+	failure := func(obj *js.Object) {
+		if connected {
+			if endConnCb != nil {
+				endConnCb(&Peripheral{o: obj})
+			}
+		} else {
+			err = errors.New("Error connecting to BLE peripheral")
+			close(ch)
+		}
+	}
+	connecting++
+	stopScan()
+	js.Global.Get("ble").Call("connect", id, success, failure)
+	<-ch
+	connecting--
+	resumeScan()
+	return
+}
+
+func Disconnect(id string) (err error) {
+	ch := make(chan struct{})
+	success := func() {
+		close(ch)
+	}
+	failure := func() {
+		err = errors.New("Error closing BLE peripheral: " + id)
+		close(ch)
+	}
+	js.Global.Get("ble").Call("disconnect", id, success, failure)
+	<-ch
+	return
 }
