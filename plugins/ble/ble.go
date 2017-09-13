@@ -2,6 +2,7 @@ package ble
 
 import (
 	"errors"
+	"time"
 
 	"github.com/gopherjs/gopherjs/js"
 )
@@ -17,6 +18,10 @@ var (
 	scanCbFun func(*Peripheral)
 	scanDups  bool
 )
+
+func stringify(obj *js.Object) string {
+	return js.Global.Get("JSON").Call("stringify", obj).String()
+}
 
 func startScan(srv []string, cbFun func(*Peripheral), dups bool) {
 	if scaning {
@@ -55,8 +60,8 @@ func stopScan() (err error) {
 		scaning = false
 		close(ch)
 	}
-	failure := func() {
-		err = errors.New("Error closing BLE scan")
+	failure := func(obj *js.Object) {
+		err = errors.New("Error closing BLE scan <" + stringify(obj) + ">")
 		close(ch)
 	}
 	js.Global.Get("ble").Call("stopScan", success, failure)
@@ -101,11 +106,181 @@ func Disconnect(id string) (err error) {
 	success := func() {
 		close(ch)
 	}
-	failure := func() {
-		err = errors.New("Error closing BLE peripheral: " + id)
+	failure := func(obj *js.Object) {
+		err = errors.New("Error closing BLE peripheral: <" + stringify(obj) + ">")
 		close(ch)
 	}
 	js.Global.Get("ble").Call("disconnect", id, success, failure)
+	<-ch
+	return
+}
+
+func IsConnected(id string) (ret bool) {
+	ch := make(chan struct{})
+	success := func() {
+		ret = true
+		close(ch)
+	}
+	failure := func() {
+		ret = false
+		close(ch)
+	}
+	js.Global.Get("ble").Call("isConnected", id, success, failure)
+	<-ch
+	return
+}
+
+func Read(id, srv, char string) (ret []byte, err error) {
+	ch := make(chan struct{})
+	success := func(obj *js.Object) {
+		ret = js.Global.Get("Uint8Array").New(obj).Interface().([]byte)
+		close(ch)
+	}
+	failure := func(obj *js.Object) {
+		err = errors.New("BLE read error: <" + stringify(obj) + ">")
+		close(ch)
+	}
+	js.Global.Get("ble").Call("read", id, srv, char, success, failure)
+	<-ch
+	return
+}
+
+func Write(id, srv, char string, data []byte) (err error) {
+	ch := make(chan struct{})
+	success := func() {
+		close(ch)
+	}
+	failure := func(obj *js.Object) {
+		err = errors.New("BLE write error: <" + stringify(obj) + ">")
+		close(ch)
+	}
+	arr := js.NewArrayBuffer(data)
+	js.Global.Get("ble").Call("write", id, srv, char, arr, success, failure)
+	<-ch
+	return
+}
+
+func WriteWithoutResponse(id, srv, char string, data []byte) (err error) {
+	ch := make(chan struct{})
+	success := func() {
+		close(ch)
+	}
+	failure := func(obj *js.Object) {
+		err = errors.New("BLE write error: <" + stringify(obj) + ">")
+		close(ch)
+	}
+	arr := js.NewArrayBuffer(data)
+	js.Global.Get("ble").Call("writeWithoutResponse", id, srv, char, arr, success, failure)
+	<-ch
+	return
+}
+
+func StartNotification(id, srv, char string, recvCb func([]byte)) (err error) {
+	success := func(obj *js.Object) {
+		if recvCb != nil {
+			recvCb(js.Global.Get("Uint8Array").New(obj).Interface().([]byte))
+		}
+	}
+	failure := func(obj *js.Object) {
+		err = errors.New("BLE start notifications error: <" + stringify(obj) + ">")
+	}
+	js.Global.Get("ble").Call("startNotification", id, srv, char, success, failure)
+	time.Sleep(10 * time.Millisecond) // Dirty Hack: Wait for eventual failure callback
+	return
+}
+
+func StopNotification(id, srv, char string) (err error) {
+	ch := make(chan struct{})
+	success := func() {
+		close(ch)
+	}
+	failure := func(obj *js.Object) {
+		err = errors.New("BLE stop notifications error: <" + stringify(obj) + ">")
+		close(ch)
+	}
+	js.Global.Get("ble").Call("stopNotification", id, srv, char, success, failure)
+	<-ch
+	return
+}
+
+func IsEnabled() (ret bool) {
+	ch := make(chan struct{})
+	success := func() {
+		ret = true
+		close(ch)
+	}
+	failure := func() {
+		ret = false
+		close(ch)
+	}
+	js.Global.Get("ble").Call("isEnabled", success, failure)
+	<-ch
+	return
+}
+
+func Enable() (err error) {
+	ch := make(chan struct{})
+	success := func() {
+		close(ch)
+	}
+	failure := func(obj *js.Object) {
+		err = errors.New("Can't enable bluetooth: <" + stringify(obj) + ">")
+		close(ch)
+	}
+	js.Global.Get("ble").Call("enable", success, failure)
+	<-ch
+	return
+}
+
+func StartStateNotifications(recvCb func(string)) (err error) {
+	success := func(obj *js.Object) {
+		if recvCb != nil {
+			recvCb(obj.String())
+		}
+	}
+	js.Global.Get("ble").Call("startStateNotifications", success)
+	return
+}
+
+func StopStateNotifications() (err error) {
+	ch := make(chan struct{})
+	success := func() {
+		close(ch)
+	}
+	failure := func(obj *js.Object) {
+		err = errors.New("Can't stop bluetooth state notifications: <" + stringify(obj) + ">")
+		close(ch)
+	}
+	js.Global.Get("ble").Call("stopStateNotifications", success, failure)
+	<-ch
+	return
+}
+
+func ShowBluetoothSettings() (err error) {
+	ch := make(chan struct{})
+	success := func() {
+		close(ch)
+	}
+	failure := func(obj *js.Object) {
+		err = errors.New("Can't show bluetooth setings: <" + stringify(obj) + ">")
+		close(ch)
+	}
+	js.Global.Get("ble").Call("showBluetoothSettings", success, failure)
+	<-ch
+	return
+}
+
+func ReadRSSI(id string) (val int, err error) {
+	ch := make(chan struct{})
+	success := func(obj *js.Object) {
+		val = obj.Int()
+		close(ch)
+	}
+	failure := func(obj *js.Object) {
+		err = errors.New("Can't get device RSSI: <" + stringify(obj) + ">")
+		close(ch)
+	}
+	js.Global.Get("ble").Call("readRSSI", id, success, failure)
 	<-ch
 	return
 }
