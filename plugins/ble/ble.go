@@ -75,6 +75,9 @@ func StopScan() (err error) {
 }
 
 func Connect(id string, endConnCb func(per *Peripheral)) (per *Peripheral, err error) {
+	if !IsEnabled() {
+		return nil, errors.New("Bluetooth disabled")
+	}
 	ch := make(chan struct{})
 	connected := false
 	success := func(obj *js.Object) {
