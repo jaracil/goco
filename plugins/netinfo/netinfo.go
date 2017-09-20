@@ -2,7 +2,6 @@ package netinfo
 
 import (
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/jaracil/goco/plugins/device"
 )
 
 type ActualKind struct {
@@ -24,8 +23,7 @@ type AvailableKinds struct {
 var Current *ActualKind
 var Kinds *AvailableKinds
 
-func init() {
-	device.WaitReady()
+func Init() {
 	Current = &ActualKind{Object: js.Global.Get("navigator").Get("connection")}
 	Kinds = &AvailableKinds{Object: js.Global.Get("Connection")}
 }
