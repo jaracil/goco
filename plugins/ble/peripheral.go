@@ -4,6 +4,11 @@ import (
 	"github.com/gopherjs/gopherjs/js"
 )
 
+type AdvField struct {
+	Type int
+	Data []byte
+}
+
 type Peripheral struct {
 	o *js.Object
 }
@@ -32,6 +37,21 @@ func (p *Peripheral) Services() (ret []string) {
 	}
 	for _, srv := range servicesJS {
 		ret = append(ret, srv.(string))
+	}
+	return
+}
+
+func ParseAdvRawData(data []byte) (ret []*AdvField) {
+	p := 0
+	ret = make([]*AdvField, 0)
+	for p < len(data)-1 {
+
+		size := int(data[p])
+		if size == 0 || (p+size+1) > len(data) {
+			break
+		}
+		ret = append(ret, &AdvField{Type: int(data[p+1]), Data: data[p+2 : p+size+1]})
+		p += (size + 1)
 	}
 	return
 }
