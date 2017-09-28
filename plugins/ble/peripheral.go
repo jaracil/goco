@@ -1,6 +1,8 @@
 package ble
 
 import (
+	"encoding/hex"
+
 	"github.com/gopherjs/gopherjs/js"
 )
 
@@ -37,6 +39,33 @@ func (p *Peripheral) Services() (ret []string) {
 	}
 	for _, srv := range servicesJS {
 		ret = append(ret, srv.(string))
+	}
+	return
+}
+
+func ToUUID(data []byte) (ret string) {
+	if data != nil && len(data) == 16 {
+		ret = hex.EncodeToString(data[0:4]) + "-" + hex.EncodeToString(data[4:6]) + "-" + hex.EncodeToString(data[6:8]) + "-" + hex.EncodeToString(data[8:10]) + "-" + hex.EncodeToString(data[10:16])
+	}
+	return
+}
+
+func Reverse(data []byte) []byte {
+	if data != nil {
+		for i, j := 0, len(data)-1; i < j; i, j = i+1, j-1 {
+			data[i], data[j] = data[j], data[i]
+		}
+	}
+	return data
+}
+
+func GetData(fields []*AdvField, tp int) (ret []byte) {
+
+	for _, field := range fields {
+		if field.Type == tp {
+			ret = field.Data
+			break
+		}
 	}
 	return
 }
