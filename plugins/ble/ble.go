@@ -9,9 +9,9 @@ import (
 
 var (
 	// Status flags
-	wantScan   = false
-	scaning    = false
-	connecting = 0
+	wantScan = false
+	scaning  = false
+	paused   = 0
 
 	// Scan Params
 	scanSrv   []string
@@ -23,10 +23,29 @@ func stringify(obj *js.Object) string {
 	return js.Global.Get("JSON").Call("stringify", obj).String()
 }
 
+func PauseScan() {
+	paused++
+	stopScan()
+}
+
+func ResumeScan() {
+	if paused > 0 {
+		paused--
+	}
+	if wantScan && paused == 0 {
+		startScan(scanSrv, scanCbFun, scanDups)
+	}
+}
+
+func Scaning() bool {
+	return scaning
+}
+
 func startScan(srv []string, cbFun func(*Peripheral), dups bool) {
-	if scaning {
+	if scaning || !wantScan {
 		return
 	}
+	scaning = true
 	cb := func(obj *js.Object) {
 		if cbFun != nil {
 			cbFun(&Peripheral{o: obj})
@@ -34,13 +53,7 @@ func startScan(srv []string, cbFun func(*Peripheral), dups bool) {
 	}
 	options := map[string]interface{}{"reportDuplicates": dups}
 	js.Global.Get("ble").Call("startScanWithOptions", srv, options, cb)
-	scaning = true
-}
-
-func resumeScan() {
-	if wantScan && connecting == 0 {
-		startScan(scanSrv, scanCbFun, scanDups)
-	}
+	print("Scan started!!!")
 }
 
 func StartScan(srv []string, cbFun func(*Peripheral), dups bool) {
@@ -48,16 +61,19 @@ func StartScan(srv []string, cbFun func(*Peripheral), dups bool) {
 	scanCbFun = cbFun
 	scanDups = dups
 	wantScan = true
-	resumeScan()
+	if paused == 0 {
+		startScan(scanSrv, scanCbFun, scanDups)
+	}
+
 }
 
 func stopScan() (err error) {
 	if !scaning {
 		return
 	}
+	scaning = false
 	ch := make(chan struct{})
 	success := func() {
-		scaning = false
 		close(ch)
 	}
 	failure := func(obj *js.Object) {
@@ -66,6 +82,7 @@ func stopScan() (err error) {
 	}
 	js.Global.Get("ble").Call("stopScan", success, failure)
 	<-ch
+	print("Scan stopped!!!")
 	return
 }
 
@@ -95,12 +112,10 @@ func Connect(id string, endConnCb func(per *Peripheral)) (per *Peripheral, err e
 			close(ch)
 		}
 	}
-	connecting++
-	stopScan()
+	PauseScan()
 	js.Global.Get("ble").Call("connect", id, success, failure)
 	<-ch
-	connecting--
-	resumeScan()
+	ResumeScan()
 	return
 }
 
