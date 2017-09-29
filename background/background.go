@@ -4,28 +4,37 @@ import (
 	"github.com/gopherjs/gopherjs/js"
 )
 
+var bgc *js.Object
+
+func bg() *js.Object {
+	if bgc == nil {
+		bgc = js.Global.Get("cordova").Get("plugins").Get("backgroundMode")
+	}
+	return bgc
+}
+
 func Enable(en bool) {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("setEnabled", en)
+	bg().Call("setEnabled", en)
 }
 
 func InBackground() bool {
-	return js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("isActive").Bool()
+	return bg().Call("isActive").Bool()
 }
 
 func MoveToBackground() {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("moveToBackground")
+	bg().Call("moveToBackground")
 }
 
 func MoveToForeground() {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("moveToForeground")
+	bg().Call("moveToForeground")
 }
 
 func OverrideBackButton() {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("overrideBackButton")
+	bg().Call("overrideBackButton")
 }
 
 func ExcludeFromTaskList() {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("ExcludeFromTaskList")
+	bg().Call("ExcludeFromTaskList")
 }
 
 func IsScreenOff() (ret bool) {
@@ -34,59 +43,59 @@ func IsScreenOff() (ret bool) {
 		ret = !b
 		close(ch)
 	}
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("isScreenOff", success)
+	bg().Call("isScreenOff", success)
 	<-ch
 	return
 }
 
 func Wakeup() {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("wakeup")
+	bg().Call("wakeup")
 }
 
 func Unlock() {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("unlock")
+	bg().Call("unlock")
 }
 
 func DisableWebViewOptimizations() {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("disableWebViewOptimizations")
+	bg().Call("disableWebViewOptimizations")
 }
 
 func OnEnable(f func()) {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("on", "enable", f)
+	bg().Call("on", "enable", f)
 }
 
 func OnDisable(f func()) {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("on", "disable", f)
+	bg().Call("on", "disable", f)
 }
 
 func OnActivate(f func()) {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("on", "activate", f)
+	bg().Call("on", "activate", f)
 }
 
 func OnDeactivate(f func()) {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("on", "deactivate", f)
+	bg().Call("on", "deactivate", f)
 }
 
 func OnFailure(f func()) {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("on", "failure", f)
+	bg().Call("on", "failure", f)
 }
 
 func UnEnable(f func()) {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("un", "enable", f)
+	bg().Call("un", "enable", f)
 }
 
 func UnDisable(f func()) {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("un", "disable", f)
+	bg().Call("un", "disable", f)
 }
 
 func UnActivate(f func()) {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("un", "activate", f)
+	bg().Call("un", "activate", f)
 }
 
 func UnDeactivate(f func()) {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("un", "deactivate", f)
+	bg().Call("un", "deactivate", f)
 }
 
 func UnFailure(f func()) {
-	js.Global.Get("cordova").Get("plugins").Get("backgroundMode").Call("un", "failure", f)
+	bg().Call("un", "failure", f)
 }
