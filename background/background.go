@@ -99,3 +99,8 @@ func UnDeactivate(f func()) {
 func UnFailure(f func()) {
 	bg().Call("un", "failure", f)
 }
+
+func SetDefaults(opts map[string]interface{}) {
+	bg().Call("setDefaults", opts)
+}
+
