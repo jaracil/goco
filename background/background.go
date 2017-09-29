@@ -104,3 +104,6 @@ func SetDefaults(opts map[string]interface{}) {
 	bg().Call("setDefaults", opts)
 }
 
+func Configure(opts map[string]interface{}) {
+	bg().Call("configure", opts)
+}
