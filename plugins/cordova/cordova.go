@@ -8,10 +8,6 @@ var (
 	deviceReady = false
 )
 
-func IsReady() bool {
-	return deviceReady
-}
-
 func WaitReady() {
 	if deviceReady {
 		return
@@ -21,9 +17,13 @@ func WaitReady() {
 		deviceReady = true
 		close(ch)
 	}
-	js.Global.Get("document").Call("addEventListener", "deviceready", f, false)
+	OnDeviceReady(f)
 	<-ch
-	js.Global.Get("document").Call("removeEventListener", "deviceready", f, false)
+	UnDeviceReady(f)
+}
+
+func OnDeviceReady(cb func()) {
+	js.Global.Get("document").Call("addEventListener", "deviceready", cb, false)
 }
 
 func OnPause(cb func()) {
@@ -32,4 +32,16 @@ func OnPause(cb func()) {
 
 func OnResume(cb func()) {
 	js.Global.Get("document").Call("addEventListener", "resume", cb, false)
+}
+
+func UnDeviceReady(cb func()) {
+	js.Global.Get("document").Call("removeEventListener", "deviceready", cb, false)
+}
+
+func UnPause(cb func()) {
+	js.Global.Get("document").Call("removeEventListener", "pause", cb, false)
+}
+
+func UnResume(cb func()) {
+	js.Global.Get("document").Call("removeEventListener", "resume", cb, false)
 }
