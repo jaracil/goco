@@ -128,11 +128,11 @@ func UnFailure(f func()) {
 // the plug-in has to create a notification while in background - like a download progress bar.
 //
 // See cordova module documentation for more information.
-func SetDefaults(opts map[string]interface{}) {
+func SetDefaults(opts interface{}) {
 	bg().Call("setDefaults", opts)
 }
 
 // Configure modifies the currently displayed notification
-func Configure(opts map[string]interface{}) {
+func Configure(opts interface{}) {
 	bg().Call("configure", opts)
 }
