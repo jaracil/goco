@@ -1,4 +1,4 @@
-package nativestorage
+package push
 
 import (
 	"errors"
