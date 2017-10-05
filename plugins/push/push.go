@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/gopherjs/gopherjs/js"
+	"github.com/jaracil/goco/plugins/cordova"
 )
 
 type AndroidCfg struct {
@@ -77,6 +78,14 @@ type Push struct {
 	*js.Object
 }
 
+var mo *js.Object
+
+func init() {
+	cordova.OnDeviceReady(func() {
+		mo = js.Global.Get("PushNotification")
+	})
+}
+
 func NewConfig() *Config {
 	cfg := &Config{Object: js.Global.Get("Object").New()}
 	cfg.Android = &AndroidCfg{Object: js.Global.Get("Object").New()}
@@ -86,7 +95,7 @@ func NewConfig() *Config {
 }
 
 func New(cfg *Config) *Push {
-	obj := js.Global.Get("PushNotification").Call("init", cfg)
+	obj := mo.Call("init", cfg)
 	return &Push{Object: obj}
 }
 
@@ -96,7 +105,7 @@ func HasPermission() (res bool) {
 		res = obj.Get("isEnabled").Bool()
 		close(ch)
 	}
-	js.Global.Get("PushNotification").Call("hasPermission", success)
+	mo.Call("hasPermission", success)
 	<-ch
 	return
 }

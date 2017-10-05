@@ -4,11 +4,11 @@ import (
 	"errors"
 
 	"github.com/gopherjs/gopherjs/js"
+	"github.com/jaracil/goco/plugins/cordova"
 )
 
 type Heading struct {
 	*js.Object
-
 	MagneticHeading float64 `js:"magneticHeading"`
 	TrueHeading     float64 `js:"trueHeading"`
 	HeadingAccuracy float64 `js:"headingAccuracy"`
@@ -16,17 +16,21 @@ type Heading struct {
 }
 
 type Watcher struct {
-	id *js.Object
+	*js.Object
 }
 
-func wrapHeading(obj *js.Object) *Heading {
-	return &Heading{Object: obj}
+var mo *js.Object
+
+func init() {
+	cordova.OnDeviceReady(func() {
+		mo = js.Global.Get("navigator").Get("compass")
+	})
 }
 
 func CurrentHeading() (heading *Heading, err error) {
 	ch := make(chan struct{})
-	success := func(obj *js.Object) {
-		heading = wrapHeading(obj)
+	success := func(h *Heading) {
+		heading = h
 		close(ch)
 	}
 	fail := func() {
@@ -34,14 +38,13 @@ func CurrentHeading() (heading *Heading, err error) {
 		close(ch)
 	}
 
-	js.Global.Get("navigator").Get("compass").Call("getCurrentHeading", success, fail)
+	mo.Call("getCurrentHeading", success, fail)
 	<-ch
 	return
 }
 
 func NewWatcher(cb func(*Heading, error), options map[string]interface{}) *Watcher {
-	success := func(obj *js.Object) {
-		h := wrapHeading(obj)
+	success := func(h *Heading) {
 		cb(h, nil)
 	}
 
@@ -50,10 +53,10 @@ func NewWatcher(cb func(*Heading, error), options map[string]interface{}) *Watch
 		cb(nil, err)
 	}
 
-	id := js.Global.Get("navigator").Get("compass").Call("watchHeading", success, fail, options)
-	return &Watcher{id: id}
+	id := mo.Call("watchHeading", success, fail, options)
+	return &Watcher{Object: id}
 }
 
 func (w *Watcher) Close() {
-	js.Global.Get("navigator").Get("compass").Call("clearWatch", w.id)
+	mo.Call("clearWatch", w)
 }

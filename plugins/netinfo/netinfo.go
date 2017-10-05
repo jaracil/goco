@@ -2,6 +2,7 @@ package netinfo
 
 import (
 	"github.com/gopherjs/gopherjs/js"
+	"github.com/jaracil/goco/plugins/cordova"
 )
 
 type ActualKind struct {
@@ -23,9 +24,12 @@ type AvailableKinds struct {
 var Current *ActualKind
 var Kinds *AvailableKinds
 
-func Init() {
-	Current = &ActualKind{Object: js.Global.Get("navigator").Get("connection")}
-	Kinds = &AvailableKinds{Object: js.Global.Get("Connection")}
+func init() {
+	cordova.OnDeviceReady(func() {
+		Current = &ActualKind{Object: js.Global.Get("navigator").Get("connection")}
+		Kinds = &AvailableKinds{Object: js.Global.Get("Connection")}
+	})
+
 }
 
 func IsCell() bool {

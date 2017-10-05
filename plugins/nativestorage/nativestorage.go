@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/gopherjs/gopherjs/js"
+	"github.com/jaracil/goco/plugins/cordova"
 )
 
 var (
@@ -15,6 +16,14 @@ var (
 	ErrParam       = errors.New("Storage error: Wrong parameter")
 	ErrUnknown     = errors.New("Storage error: Unknown")
 )
+
+var mo *js.Object
+
+func init() {
+	cordova.OnDeviceReady(func() {
+		mo = js.Global.Get("NativeStorage")
+	})
+}
 
 func errorByCode(code int) error {
 	switch code {
@@ -43,7 +52,7 @@ func SetItem(key string, val interface{}) (err error) {
 		err = errorByCode(obj.Get("code").Int())
 		close(ch)
 	}
-	js.Global.Get("NativeStorage").Call("setItem", key, val, success, fail)
+	mo.Call("setItem", key, val, success, fail)
 	<-ch
 	return
 }
@@ -58,7 +67,7 @@ func GetItemJS(key string) (ret *js.Object, err error) {
 		err = errorByCode(obj.Get("code").Int())
 		close(ch)
 	}
-	js.Global.Get("NativeStorage").Call("getItem", key, success, fail)
+	mo.Call("getItem", key, success, fail)
 	<-ch
 	return
 }
@@ -120,7 +129,7 @@ func RemoveItem(key string) (err error) {
 		err = errorByCode(obj.Get("code").Int())
 		close(ch)
 	}
-	js.Global.Get("NativeStorage").Call("remove", key, success, fail)
+	mo.Call("remove", key, success, fail)
 	<-ch
 	return
 }
@@ -134,7 +143,7 @@ func RemoveAll() (err error) {
 		err = errorByCode(obj.Get("code").Int())
 		close(ch)
 	}
-	js.Global.Get("NativeStorage").Call("clear", success, fail)
+	mo.Call("clear", success, fail)
 	<-ch
 	return
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/gopherjs/gopherjs/js"
+	"github.com/jaracil/goco/plugins/cordova"
 )
 
 type Acceleration struct {
@@ -15,17 +16,21 @@ type Acceleration struct {
 }
 
 type Watcher struct {
-	id *js.Object
+	*js.Object
 }
 
-func wrapAcceleration(obj *js.Object) *Acceleration {
-	return &Acceleration{Object: obj}
+var mo *js.Object
+
+func init() {
+	cordova.OnDeviceReady(func() {
+		mo = js.Global.Get("navigator").Get("accelerometer")
+	})
 }
 
 func CurrentAcceleration() (acc *Acceleration, err error) {
 	ch := make(chan struct{})
-	success := func(obj *js.Object) {
-		acc = wrapAcceleration(obj)
+	success := func(a *Acceleration) {
+		acc = a
 		close(ch)
 	}
 	fail := func() {
@@ -33,15 +38,14 @@ func CurrentAcceleration() (acc *Acceleration, err error) {
 		close(ch)
 	}
 
-	js.Global.Get("navigator").Get("accelerometer").Call("getCurrentAcceleration", success, fail)
+	mo.Call("getCurrentAcceleration", success, fail)
 	<-ch
 	return
 }
 
 func NewWatcher(cb func(acc *Acceleration, err error), options map[string]interface{}) *Watcher {
-	success := func(obj *js.Object) {
-		acc := wrapAcceleration(obj)
-		cb(acc, nil)
+	success := func(a *Acceleration) {
+		cb(a, nil)
 	}
 
 	fail := func() {
@@ -49,10 +53,10 @@ func NewWatcher(cb func(acc *Acceleration, err error), options map[string]interf
 		cb(nil, err)
 	}
 
-	id := js.Global.Get("navigator").Get("accelerometer").Call("watchAcceleration", success, fail, options)
-	return &Watcher{id: id}
+	id := mo.Call("watchAcceleration", success, fail, options)
+	return &Watcher{Object: id}
 }
 
 func (w *Watcher) Close() {
-	js.Global.Get("navigator").Get("accelerometer").Call("clearWatch", w.id)
+	mo.Call("clearWatch", w)
 }

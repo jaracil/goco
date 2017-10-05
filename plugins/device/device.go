@@ -2,10 +2,11 @@ package device
 
 import (
 	"github.com/gopherjs/gopherjs/js"
+	"github.com/jaracil/goco/plugins/cordova"
 )
 
 var (
-	devInfo *DeviceInfo
+	DevInfo *DeviceInfo
 )
 
 type DeviceInfo struct {
@@ -22,12 +23,10 @@ type DeviceInfo struct {
 	Serial string `js:"serial"`
 }
 
-func Info() *DeviceInfo {
-	if devInfo != nil {
-		return devInfo
-	}
-	devInfo = &DeviceInfo{
-		Object: js.Global.Get("device"),
-	}
-	return devInfo
+func init() {
+	cordova.OnDeviceReady(func() {
+		DevInfo = &DeviceInfo{
+			Object: js.Global.Get("device"),
+		}
+	})
 }

@@ -4,11 +4,11 @@ import (
 	"errors"
 
 	"github.com/gopherjs/gopherjs/js"
+	"github.com/jaracil/goco/plugins/cordova"
 )
 
 type Coords struct {
 	*js.Object
-
 	Latitude         float64 `js:"latitude"`
 	Longitude        float64 `js:"longitude"`
 	Altitude         float64 `js:"altitude"`
@@ -20,23 +20,26 @@ type Coords struct {
 
 type Position struct {
 	*js.Object
-
-	Coords    Coords `js:"coords"`
-	Timestamp int64  `js:"timestamp"`
+	Coords    *Coords `js:"coords"`
+	Timestamp int64   `js:"timestamp"`
 }
 
 type Watcher struct {
-	id *js.Object
+	*js.Object
 }
 
-func wrapPosition(obj *js.Object) *Position {
-	return &Position{Object: obj}
+var mo *js.Object
+
+func init() {
+	cordova.OnDeviceReady(func() {
+		mo = js.Global.Get("navigator").Get("geolocation")
+	})
 }
 
-func CurrentPosition(options map[string]interface{}) (pos *Position, err error) {
+func CurrentPosition(options interface{}) (pos *Position, err error) {
 	ch := make(chan struct{})
-	success := func(obj *js.Object) {
-		pos = wrapPosition(obj)
+	success := func(p *Position) {
+		pos = p
 		close(ch)
 	}
 	fail := func(obj *js.Object) {
@@ -44,15 +47,14 @@ func CurrentPosition(options map[string]interface{}) (pos *Position, err error) 
 		close(ch)
 	}
 
-	js.Global.Get("navigator").Get("geolocation").Call("getCurrentPosition", success, fail, options)
+	mo.Call("getCurrentPosition", success, fail, options)
 	<-ch
 	return
 }
 
-func NewWatcher(cb func(pos *Position, err error), options map[string]interface{}) *Watcher {
-	success := func(obj *js.Object) {
-		pos := wrapPosition(obj)
-		cb(pos, nil)
+func NewWatcher(cb func(pos *Position, err error), options interface{}) *Watcher {
+	success := func(p *Position) {
+		cb(p, nil)
 	}
 
 	fail := func(obj *js.Object) {
@@ -60,10 +62,10 @@ func NewWatcher(cb func(pos *Position, err error), options map[string]interface{
 		cb(nil, err)
 	}
 
-	id := js.Global.Get("navigator").Get("geolocation").Call("watchPosition", success, fail, options)
-	return &Watcher{id: id}
+	id := mo.Call("watchPosition", success, fail, options)
+	return &Watcher{Object: id}
 }
 
 func (w *Watcher) Close() {
-	js.Global.Get("navigator").Get("geolocation").Call("clearWatch", w.id)
+	mo.Call("clearWatch", w)
 }
