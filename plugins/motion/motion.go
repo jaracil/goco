@@ -1,7 +1,7 @@
-//Package motion is a GopherJS wrapper for cordova plugin device-motion.
+// Package motion is a GopherJS wrapper for cordova plugin device-motion.
 //
-//Install plugin:
-// cordova plugin add cordova-plugin-device-motion
+// Install plugin:
+//  cordova plugin add cordova-plugin-device-motion
 package motion
 
 import (
@@ -11,7 +11,7 @@ import (
 	"github.com/jaracil/goco/plugins/cordova"
 )
 
-//Acceleration type with x, y, z axes and timestamp
+// Acceleration type with x, y, z axes and timestamp
 type Acceleration struct {
 	*js.Object
 	X         float64 `js:"x"`
@@ -20,7 +20,7 @@ type Acceleration struct {
 	Timestamp int64   `js:"timestamp"`
 }
 
-//Watcher type monitors acceleration changes
+// Watcher type monitors acceleration changes
 type Watcher struct {
 	*js.Object
 }
@@ -33,7 +33,7 @@ func init() {
 	})
 }
 
-//CurrentAcceleration gets the current acceleration.
+// CurrentAcceleration gets the current acceleration.
 func CurrentAcceleration() (acc *Acceleration, err error) {
 	ch := make(chan struct{})
 	success := func(a *Acceleration) {
@@ -50,7 +50,7 @@ func CurrentAcceleration() (acc *Acceleration, err error) {
 	return
 }
 
-//NewWatcher creates a new motion watcher
+// NewWatcher creates a new motion watcher
 func NewWatcher(cb func(acc *Acceleration, err error), options interface{}) *Watcher {
 	success := func(a *Acceleration) {
 		cb(a, nil)
@@ -65,7 +65,7 @@ func NewWatcher(cb func(acc *Acceleration, err error), options interface{}) *Wat
 	return &Watcher{Object: id}
 }
 
-//Close cancels watcher
+// Close cancels watcher
 func (w *Watcher) Close() {
 	mo.Call("clearWatch", w)
 }
