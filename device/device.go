@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/jaracil/goco/plugins/cordova"
+	"github.com/jaracil/goco"
 )
 
 var (
@@ -27,7 +27,7 @@ type DeviceInfo struct {
 }
 
 func init() {
-	cordova.OnDeviceReady(func() {
+	goco.OnDeviceReady(func() {
 		DevInfo = &DeviceInfo{
 			Object: js.Global.Get("device"),
 		}

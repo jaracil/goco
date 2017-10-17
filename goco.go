@@ -1,4 +1,4 @@
-package cordova
+package goco
 
 import (
 	"github.com/gopherjs/gopherjs/js"

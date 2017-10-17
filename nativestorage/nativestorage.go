@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/jaracil/goco/plugins/cordova"
+	"github.com/jaracil/goco"
 )
 
 var (
@@ -20,7 +20,7 @@ var (
 var mo *js.Object
 
 func init() {
-	cordova.OnDeviceReady(func() {
+	goco.OnDeviceReady(func() {
 		mo = js.Global.Get("NativeStorage")
 	})
 }

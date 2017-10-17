@@ -2,13 +2,13 @@ package background
 
 import (
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/jaracil/goco/plugins/cordova"
+	"github.com/jaracil/goco"
 )
 
 var mo *js.Object
 
 func init() {
-	cordova.OnDeviceReady(func() {
+	goco.OnDeviceReady(func() {
 		mo = js.Global.Get("cordova").Get("plugins").Get("backgroundMode")
 	})
 }

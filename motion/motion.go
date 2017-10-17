@@ -8,7 +8,7 @@ import (
 	"errors"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/jaracil/goco/plugins/cordova"
+	"github.com/jaracil/goco"
 )
 
 // Acceleration type with x, y, z axes and timestamp
@@ -28,7 +28,7 @@ type Watcher struct {
 var mo *js.Object
 
 func init() {
-	cordova.OnDeviceReady(func() {
+	goco.OnDeviceReady(func() {
 		mo = js.Global.Get("navigator").Get("accelerometer")
 	})
 }
