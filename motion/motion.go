@@ -1,4 +1,4 @@
-// Package motion is a GopherJS wrapper for cordova plugin device-motion.
+// Package motion is a GopherJS wrapper for cordova device-motion plugin.
 //
 // Install plugin:
 //  cordova plugin add cordova-plugin-device-motion

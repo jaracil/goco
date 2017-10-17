@@ -279,7 +279,7 @@ func ShowBluetoothSettings() (err error) {
 		close(ch)
 	}
 	failure := func(obj *js.Object) {
-		err = errors.New("Can't show bluetooth setings: <" + stringify(obj) + ">")
+		err = errors.New("Can't show bluetooth settings: <" + stringify(obj) + ">")
 		close(ch)
 	}
 	mo.Call("showBluetoothSettings", success, failure)
