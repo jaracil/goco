@@ -1,3 +1,7 @@
+// Package background is a GopherJS wrapper for cordova background-mode plugin.
+//
+// Install plugin:
+//  cordova plugin add cordova-plugin-background-mode
 package background
 
 import (
