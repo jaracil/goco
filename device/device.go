@@ -1,3 +1,9 @@
+// Package device is a GopherJS wrapper for cordova device plugin.
+// This plugin provides a public DevInfo var, which describes the device's hardware and software.
+//
+// Install plugin:
+//  cordova plugin add cordova-plugin-device
+
 package device
 
 import (
@@ -9,26 +15,26 @@ import (
 )
 
 var (
-	DevInfo *DeviceInfo
+	// DevInfo is a Instance of device.Info type
+	DevInfo *Info
 )
 
-type DeviceInfo struct {
+// Info declares device's hardware and software info.
+type Info struct {
 	*js.Object
-	Cordova      string `js:"cordova"`
-	Model        string `js:"model"`
-	Platform     string `js:"platform"`
-	UUID         string `js:"uuid"`
-	Version      string `js:"version"`
-	Manufacturer string `js:"manufacturer"`
-	// whether the device is running on a simulator.
-	IsVirtual bool `js:"isVirtual"`
-	// Get the device hardware serial number
-	Serial string `js:"serial"`
+	Cordova      string `js:"cordova"`      // Version of Cordova running on the device.
+	Model        string `js:"model"`        // Name of the device's model or product. The value is set by the device manufacturer and may be different across versions of the same product.
+	Platform     string `js:"platform"`     // Device's operating system name.
+	UUID         string `js:"uuid"`         // Device's Universally Unique Identifier.
+	Version      string `js:"version"`      // Operating system version.
+	Manufacturer string `js:"manufacturer"` // Device's manufacturer.
+	IsVirtual    bool   `js:"isVirtual"`    // Whether the device is running on a simulator.
+	Serial       string `js:"serial"`       // Device's hardware serial number
 }
 
 func init() {
 	goco.OnDeviceReady(func() {
-		DevInfo = &DeviceInfo{
+		DevInfo = &Info{
 			Object: js.Global.Get("device"),
 		}
 		if DevInfo.Platform == "browser" {
