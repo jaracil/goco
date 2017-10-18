@@ -3,7 +3,6 @@
 //
 // Install plugin:
 //  cordova plugin add cordova-plugin-device
-
 package device
 
 import (
@@ -15,8 +14,7 @@ import (
 )
 
 var (
-	// DevInfo is a Instance of device.Info type
-	DevInfo *Info
+	DevInfo *Info // DevInfo is a Instance of device.Info type
 )
 
 // Info declares device's hardware and software info.
