@@ -1,8 +1,8 @@
-// Package push is a GopherJS wrapper for cordova local-notifications plugin.
+// Package notifications is a GopherJS wrapper for cordova local-notifications plugin.
 //
 // Install plugin:
 //  cordova plugin add https://github.com/katzer/cordova-plugin-local-notifications
-package push
+package notifications
 
 import (
 	"time"
