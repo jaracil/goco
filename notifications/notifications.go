@@ -11,21 +11,23 @@ import (
 	"github.com/jaracil/goco"
 )
 
+// Notification type contains all information about one notification.
 type Notification struct {
 	*js.Object
-	ID        int       `js:"id"`
-	Title     string    `js:"title"`
-	Text      string    `js:"text"`
-	Every     string    `js:"every"`
-	At        time.Time `js:"at"`
-	FirstAt   time.Time `js:"firstAt"`
-	Badge     int       `js:"badge"`
-	Sound     string    `js:"sound"`
-	Data      string    `js:"data"`
-	Icon      string    `js:"icon"`
-	SmallIcon string    `js:"smallIcon"`
-	Ongoing   bool      `js:"ongoing"`
-	Led       string    `js:"led"`
+	ID        int       `js:"id"`        // A unique identifier required to clear, cancel, update or retrieve the local notification in the future
+	Title     string    `js:"title"`     // First row of the notification - Default: Empty string (iOS) or the app name (Android)
+	Text      string    `js:"text"`      // Second row of the notification - Default: Empty string
+	Badge     int       `js:"badge"`     // The number currently set as the badge of the app icon in Springboard (iOS) or at the right-hand side of the local notification (Android) - Default: 0 (which means don't show a number)
+	Sound     string    `js:"sound"`     // Uri of the file containing the sound to play when an alert is displayed	- Default: res://platform_default
+	Data      string    `js:"data"`      // Arbitrary data.
+	Icon      string    `js:"icon"`      // Uri of the icon that is shown in the ticker and notification - Default: res://icon
+	SmallIcon string    `js:"smallIcon"` // Uri of the resource (only res://) to use in the notification layouts. Different classes of devices may return different sizes - Default: res://ic_popup_reminder
+	Ongoing   bool      `js:"ongoing"`   // Ongoing notification
+	Led       string    `js:"led"`       // ARGB value that you would like the LED on the device to blink - Default: FFFFFF
+	Every     string    `js:"every"`     // The interval at which to reschedule the local notification. That can be a value of second, minute, hour, day, week, month or year.
+	At        time.Time // The date and time when the system should deliver the local notification. If the specified value is nil or is a date in the past, the local notification is delivered immediately.
+	FirstAt   time.Time // The date and time when the system should first deliver the local notification. If the specified value is nil or is a date in the past, the local notification is delivered immediately.
+
 }
 
 var mo *js.Object
@@ -62,7 +64,14 @@ func RegisterPermission() (res bool) {
 }
 
 // Schedule accepts *Notification or []*Notification to schedule.
-func Schedule(notif interface{}) {
+func Schedule(notif *Notification) {
+	if !notif.At.IsZero() {
+		notif.Set("at", notif.At.UnixNano()/1000000)
+	}
+	if !notif.FirstAt.IsZero() {
+		notif.Set("firstAt", notif.FirstAt.UnixNano()/1000000)
+	}
+
 	ch := make(chan struct{})
 	success := func() {
 		close(ch)
@@ -72,7 +81,7 @@ func Schedule(notif interface{}) {
 }
 
 // Update accepts *Notification or []*Notification to update.
-func Update(notif interface{}) {
+func Update(notif *Notification) {
 	ch := make(chan struct{})
 	success := func() {
 		close(ch)
@@ -81,8 +90,8 @@ func Update(notif interface{}) {
 	<-ch
 }
 
-// Clear clears notification by id or slice of ids.
-func Clear(id interface{}) {
+// Clear clears notification by ID.
+func Clear(id int) {
 	ch := make(chan struct{})
 	success := func() {
 		close(ch)
@@ -101,8 +110,8 @@ func ClearAll() {
 	<-ch
 }
 
-// Cancel cancels notification by id or slice of ids.
-func Cancel(id interface{}) {
+// Cancel cancels notification by ID.
+func Cancel(id int) {
 	ch := make(chan struct{})
 	success := func() {
 		close(ch)
@@ -192,38 +201,52 @@ func IsTriggered(id int) (res bool) {
 	return <-ch
 }
 
-func objToIntSlice(obj *js.Object) []int {
-	l := obj.Length()
-	ret := make([]int, 0)
-	for n := 0; n < l; n++ {
-		ret = append(ret, obj.Index(n).Int())
-	}
-	return ret
-}
-
+// GetAllIds returns all alive ID's.
 func GetAllIds() []int {
-	ch := make(chan *js.Object, 1)
-	success := func(obj *js.Object) {
-		ch <- obj
+	ch := make(chan []int, 1)
+	success := func(s []int) {
+		ch <- s
 	}
 	mo.Call("getAllIds", success)
-	return objToIntSlice(<-ch)
+	return <-ch
 }
 
+// GetScheduledIds returns scheduled ID's.
 func GetScheduledIds() []int {
-	ch := make(chan *js.Object, 1)
-	success := func(obj *js.Object) {
-		ch <- obj
+	ch := make(chan []int, 1)
+	success := func(s []int) {
+		ch <- s
 	}
 	mo.Call("getScheduledIds", success)
-	return objToIntSlice(<-ch)
+	return <-ch
 }
 
+// GetTriggeredIds returns triggered ID's.
 func GetTriggeredIds() []int {
-	ch := make(chan *js.Object, 1)
-	success := func(obj *js.Object) {
-		ch <- obj
+	ch := make(chan []int, 1)
+	success := func(s []int) {
+		ch <- s
 	}
 	mo.Call("getTriggeredIds", success)
-	return objToIntSlice(<-ch)
+	return <-ch
+}
+
+// GetAll returns all alive notifications.
+func GetAll() []*Notification {
+	ch := make(chan []*Notification, 1)
+	success := func(s []*Notification) {
+		ch <- s
+	}
+	mo.Call("getAll", success)
+	return <-ch
+}
+
+// GetByID returns notification by ID
+func GetByID(id int) *Notification {
+	ch := make(chan *Notification, 1)
+	success := func(n *Notification) {
+		ch <- n
+	}
+	mo.Call("get", id, success)
+	return <-ch
 }
