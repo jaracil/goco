@@ -35,19 +35,21 @@ func NewOptions() *Options {
 }
 
 // FetchUpdate downloads an update
-func FetchUpdate(opt *Options) (data interface{}, err error) {
+func FetchUpdate(opts ...*Options) (data interface{}, err error) {
 	if mo == nil {
 		return nil, errors.New("Cannot find chcp object")
 	}
 
 	m := map[string]interface{}{}
 
-	if opt.Get("configFile") != nil {
-		m["config-file"] = opt.Get("configFile")
-	}
+	if len(opts) > 0 {
+		if opts[0].Get("configFile") != nil {
+			m["config-file"] = opts[0].Get("configFile")
+		}
 
-	if opt.Get("requestHeaders") != nil {
-		m["request-headers"] = opt.Get("requestHeaders")
+		if opts[0].Get("requestHeaders") != nil {
+			m["request-headers"] = opts[0].Get("requestHeaders")
+		}
 	}
 
 	ch := make(chan struct{})
