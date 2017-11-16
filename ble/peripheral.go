@@ -3,8 +3,10 @@ package ble
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"strings"
 
 	"github.com/gopherjs/gopherjs/js"
+	"github.com/jaracil/goco/device"
 )
 
 type AdvField struct {
@@ -43,7 +45,27 @@ func (p *Peripheral) VkID() string {
 }
 
 func (p *Peripheral) Parse() {
-	p.parseAndroid()
+	if device.DevInfo.Platform == "Android" {
+		p.parseAndroid()
+	} else {
+		p.parseIOS()
+	}
+}
+
+func (p *Peripheral) parseIOS() {
+	uuids := p.Get("advertising").Get("kCBAdvDataServiceUUIDs")
+	if uuids.Length() > 0 {
+		p.serviceUUID = strings.ToLower(uuids.Index(0).String())
+	}
+	serviceData := p.Get("advertising").Get("kCBAdvDataServiceData")
+	if serviceData == nil {
+		return
+	}
+	vkIDBuffer := serviceData.Get("0000")
+	if vkIDBuffer == nil {
+		return
+	}
+	p.vkID = base64.StdEncoding.EncodeToString(js.Global.Get("Uint8Array").New(vkIDBuffer).Interface().([]byte))
 }
 
 func (p *Peripheral) parseAndroid() {
