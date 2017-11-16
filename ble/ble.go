@@ -56,7 +56,10 @@ func startScan(srv []string, cbFun func(*Peripheral), dups bool) {
 	}
 	scaning = true
 	options := map[string]interface{}{"reportDuplicates": dups}
-	mo.Call("startScanWithOptions", srv, options, cbFun)
+	mo.Call("startScanWithOptions", srv, options, func(p *Peripheral) {
+		p.Parse()
+		cbFun(p)
+	})
 	print("Scan started!!!")
 }
 

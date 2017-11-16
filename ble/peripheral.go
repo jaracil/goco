@@ -1,6 +1,7 @@
 package ble
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 
 	"github.com/gopherjs/gopherjs/js"
@@ -13,6 +14,8 @@ type AdvField struct {
 
 type Peripheral struct {
 	*js.Object
+	serviceUUID string
+	vkID        string
 }
 
 func (p *Peripheral) Name() string {
@@ -27,8 +30,30 @@ func (p *Peripheral) RSSI() int {
 	return p.Get("rssi").Int()
 }
 
-func (p *Peripheral) RawAdvData() []byte {
+func (p *Peripheral) rawAdvData() []byte {
 	return js.Global.Get("Uint8Array").New(p.Get("advertising")).Interface().([]byte)
+}
+
+func (p *Peripheral) ServiceUUID() string {
+	return p.serviceUUID
+}
+
+func (p *Peripheral) VkID() string {
+	return p.vkID
+}
+
+func (p *Peripheral) Parse() {
+	p.parseAndroid()
+}
+
+func (p *Peripheral) parseAndroid() {
+	fields := parseAdvRawData(p.rawAdvData())
+	p.serviceUUID = toUUID(reverse(getData(fields, 0x7)))
+
+	srvData := getData(fields, 0x16)
+	if srvData != nil && len(srvData) == 8 {
+		p.vkID = base64.StdEncoding.EncodeToString(srvData[2:8])
+	}
 }
 
 func (p *Peripheral) Services() (ret []string) {
@@ -43,14 +68,14 @@ func (p *Peripheral) Services() (ret []string) {
 	return
 }
 
-func ToUUID(data []byte) (ret string) {
+func toUUID(data []byte) (ret string) {
 	if data != nil && len(data) == 16 {
 		ret = hex.EncodeToString(data[0:4]) + "-" + hex.EncodeToString(data[4:6]) + "-" + hex.EncodeToString(data[6:8]) + "-" + hex.EncodeToString(data[8:10]) + "-" + hex.EncodeToString(data[10:16])
 	}
 	return
 }
 
-func Reverse(data []byte) []byte {
+func reverse(data []byte) []byte {
 	if data != nil {
 		for i, j := 0, len(data)-1; i < j; i, j = i+1, j-1 {
 			data[i], data[j] = data[j], data[i]
@@ -59,7 +84,7 @@ func Reverse(data []byte) []byte {
 	return data
 }
 
-func GetData(fields []*AdvField, tp int) (ret []byte) {
+func getData(fields []*AdvField, tp int) (ret []byte) {
 
 	for _, field := range fields {
 		if field.Type == tp {
@@ -70,7 +95,7 @@ func GetData(fields []*AdvField, tp int) (ret []byte) {
 	return
 }
 
-func ParseAdvRawData(data []byte) (ret []*AdvField) {
+func parseAdvRawData(data []byte) (ret []*AdvField) {
 	p := 0
 	ret = make([]*AdvField, 0)
 	for p < len(data)-1 {
