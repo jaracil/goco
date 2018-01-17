@@ -49,7 +49,7 @@ func SetItem(key string, val interface{}) (err error) {
 		close(ch)
 	}
 	fail := func(obj *js.Object) {
-		err = errorByCode(obj.Get("code").Int())
+		err = errorByCode(obj.Get("code").Get("code").Int())
 		close(ch)
 	}
 	mo().Call("setItem", key, val, success, fail)
@@ -64,7 +64,7 @@ func GetItemJS(key string) (ret *js.Object, err error) {
 		close(ch)
 	}
 	fail := func(obj *js.Object) {
-		err = errorByCode(obj.Get("code").Int())
+		err = errorByCode(obj.Get("code").Get("code").Int())
 		close(ch)
 	}
 	mo().Call("getItem", key, success, fail)
@@ -126,7 +126,7 @@ func RemoveItem(key string) (err error) {
 		close(ch)
 	}
 	fail := func(obj *js.Object) {
-		err = errorByCode(obj.Get("code").Int())
+		err = errorByCode(obj.Get("code").Get("code").Int())
 		close(ch)
 	}
 	mo().Call("remove", key, success, fail)
@@ -140,7 +140,7 @@ func RemoveAll() (err error) {
 		close(ch)
 	}
 	fail := func(obj *js.Object) {
-		err = errorByCode(obj.Get("code").Int())
+		err = errorByCode(obj.Get("code").Get("code").Int())
 		close(ch)
 	}
 	mo().Call("clear", success, fail)
