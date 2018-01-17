@@ -7,19 +7,19 @@
 package univlinks
 
 import (
-	"fmt"
-
 	"github.com/gopherjs/gopherjs/js"
 )
 
-var mo *js.Object
+var instance *js.Object
 
-func getRoot() *js.Object {
-	return js.Global.Get("universalLinks")
+func mo() *js.Object {
+	if instance == nil {
+		instance = js.Global.Get("universalLinks")
+	}
+	return instance
 }
 
 // Subscribe so cb is executed when eventName (defined in config.xml) is emitted when opening a link
 func Subscribe(eventName string, cb func(*js.Object)) {
-	println(fmt.Sprintf("univlinks.Subscribe: eventName=%q, cb=%v", eventName, cb))
-	getRoot().Call("subscribe", eventName, cb)
+	mo().Call("subscribe", eventName, cb)
 }

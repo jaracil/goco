@@ -8,7 +8,6 @@ import (
 	"errors"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/jaracil/goco"
 )
 
 // Acceleration type with x, y, z axes and timestamp
@@ -25,12 +24,13 @@ type Watcher struct {
 	*js.Object
 }
 
-var mo *js.Object
+var instance *js.Object
 
-func init() {
-	goco.OnDeviceReady(func() {
-		mo = js.Global.Get("navigator").Get("accelerometer")
-	})
+func mo() *js.Object {
+	if instance == nil {
+		instance = js.Global.Get("navigator").Get("accelerometer")
+	}
+	return instance
 }
 
 // CurrentAcceleration gets the current acceleration.
@@ -45,7 +45,7 @@ func CurrentAcceleration() (acc *Acceleration, err error) {
 		close(ch)
 	}
 
-	mo.Call("getCurrentAcceleration", success, fail)
+	mo().Call("getCurrentAcceleration", success, fail)
 	<-ch
 	return
 }
@@ -61,11 +61,11 @@ func NewWatcher(cb func(acc *Acceleration, err error), options interface{}) *Wat
 		cb(nil, err)
 	}
 
-	id := mo.Call("watchAcceleration", success, fail, options)
+	id := mo().Call("watchAcceleration", success, fail, options)
 	return &Watcher{Object: id}
 }
 
 // Close cancels watcher
 func (w *Watcher) Close() {
-	mo.Call("clearWatch", w)
+	mo().Call("clearWatch", w)
 }

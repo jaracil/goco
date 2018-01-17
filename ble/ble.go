@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/jaracil/goco"
 )
 
 var (
@@ -20,12 +19,13 @@ var (
 	scanDups  bool
 )
 
-var mo *js.Object
+var instance *js.Object
 
-func init() {
-	goco.OnDeviceReady(func() {
-		mo = js.Global.Get("ble")
-	})
+func mo() *js.Object {
+	if instance == nil {
+		instance = js.Global.Get("ble")
+	}
+	return instance
 }
 
 func stringify(obj *js.Object) string {
@@ -56,11 +56,10 @@ func startScan(srv []string, cbFun func(*Peripheral), dups bool) {
 	}
 	scaning = true
 	options := map[string]interface{}{"reportDuplicates": dups}
-	mo.Call("startScanWithOptions", srv, options, func(p *Peripheral) {
+	mo().Call("startScanWithOptions", srv, options, func(p *Peripheral) {
 		p.Parse()
 		cbFun(p)
 	})
-	print("Scan started!!!")
 }
 
 func StartScan(srv []string, cbFun func(*Peripheral), dups bool) {
@@ -87,9 +86,8 @@ func stopScan() (err error) {
 		err = errors.New("Error closing BLE scan <" + stringify(obj) + ">")
 		close(ch)
 	}
-	mo.Call("stopScan", success, failure)
+	mo().Call("stopScan", success, failure)
 	<-ch
-	print("Scan stopped!!!")
 	return
 }
 
@@ -120,7 +118,7 @@ func Connect(id string, endConnCb func(per *Peripheral)) (per *Peripheral, err e
 		}
 	}
 	PauseScan()
-	mo.Call("connect", id, success, failure)
+	mo().Call("connect", id, success, failure)
 	<-ch
 	ResumeScan()
 	return
@@ -135,7 +133,7 @@ func Disconnect(id string) (err error) {
 		err = errors.New("Error closing BLE peripheral: <" + stringify(obj) + ">")
 		close(ch)
 	}
-	mo.Call("disconnect", id, success, failure)
+	mo().Call("disconnect", id, success, failure)
 	<-ch
 	return
 }
@@ -150,7 +148,7 @@ func IsConnected(id string) (ret bool) {
 		ret = false
 		close(ch)
 	}
-	mo.Call("isConnected", id, success, failure)
+	mo().Call("isConnected", id, success, failure)
 	<-ch
 	return
 }
@@ -165,7 +163,7 @@ func Read(id, srv, char string) (ret []byte, err error) {
 		err = errors.New("BLE read error: <" + stringify(obj) + ">")
 		close(ch)
 	}
-	mo.Call("read", id, srv, char, success, failure)
+	mo().Call("read", id, srv, char, success, failure)
 	<-ch
 	return
 }
@@ -180,7 +178,7 @@ func Write(id, srv, char string, data []byte) (err error) {
 		close(ch)
 	}
 	arr := js.NewArrayBuffer(data)
-	mo.Call("write", id, srv, char, arr, success, failure)
+	mo().Call("write", id, srv, char, arr, success, failure)
 	<-ch
 	return
 }
@@ -195,7 +193,7 @@ func WriteWithoutResponse(id, srv, char string, data []byte) (err error) {
 		close(ch)
 	}
 	arr := js.NewArrayBuffer(data)
-	mo.Call("writeWithoutResponse", id, srv, char, arr, success, failure)
+	mo().Call("writeWithoutResponse", id, srv, char, arr, success, failure)
 	<-ch
 	return
 }
@@ -209,7 +207,7 @@ func StartNotification(id, srv, char string, recvCb func([]byte)) (err error) {
 	failure := func(obj *js.Object) {
 		err = errors.New("BLE start notifications error: <" + stringify(obj) + ">")
 	}
-	mo.Call("startNotification", id, srv, char, success, failure)
+	mo().Call("startNotification", id, srv, char, success, failure)
 	time.Sleep(10 * time.Millisecond) // Dirty Hack: Wait for eventual failure callback
 	return
 }
@@ -223,7 +221,7 @@ func StopNotification(id, srv, char string) (err error) {
 		err = errors.New("BLE stop notifications error: <" + stringify(obj) + ">")
 		close(ch)
 	}
-	mo.Call("stopNotification", id, srv, char, success, failure)
+	mo().Call("stopNotification", id, srv, char, success, failure)
 	<-ch
 	return
 }
@@ -238,7 +236,7 @@ func IsEnabled() (ret bool) {
 		ret = false
 		close(ch)
 	}
-	mo.Call("isEnabled", success, failure)
+	mo().Call("isEnabled", success, failure)
 	<-ch
 	return
 }
@@ -252,13 +250,13 @@ func Enable() (err error) {
 		err = errors.New("Can't enable bluetooth: <" + stringify(obj) + ">")
 		close(ch)
 	}
-	mo.Call("enable", success, failure)
+	mo().Call("enable", success, failure)
 	<-ch
 	return
 }
 
 func StartStateNotifications(recvCb func(string)) (err error) {
-	mo.Call("startStateNotifications", recvCb)
+	mo().Call("startStateNotifications", recvCb)
 	return
 }
 
@@ -271,7 +269,7 @@ func StopStateNotifications() (err error) {
 		err = errors.New("Can't stop bluetooth state notifications: <" + stringify(obj) + ">")
 		close(ch)
 	}
-	mo.Call("stopStateNotifications", success, failure)
+	mo().Call("stopStateNotifications", success, failure)
 	<-ch
 	return
 }
@@ -285,7 +283,7 @@ func ShowBluetoothSettings() (err error) {
 		err = errors.New("Can't show bluetooth settings: <" + stringify(obj) + ">")
 		close(ch)
 	}
-	mo.Call("showBluetoothSettings", success, failure)
+	mo().Call("showBluetoothSettings", success, failure)
 	<-ch
 	return
 }
@@ -300,7 +298,7 @@ func ReadRSSI(id string) (val int, err error) {
 		err = errors.New("Can't get device RSSI: <" + stringify(obj) + ">")
 		close(ch)
 	}
-	mo.Call("readRSSI", id, success, failure)
+	mo().Call("readRSSI", id, success, failure)
 	<-ch
 	return
 }

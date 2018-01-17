@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/jaracil/goco"
 )
 
 var (
@@ -17,12 +16,13 @@ var (
 	ErrUnknown     = errors.New("Storage error: Unknown")
 )
 
-var mo *js.Object
+var instance *js.Object
 
-func init() {
-	goco.OnDeviceReady(func() {
-		mo = js.Global.Get("NativeStorage")
-	})
+func mo() *js.Object {
+	if instance == nil {
+		instance = js.Global.Get("NativeStorage")
+	}
+	return instance
 }
 
 func errorByCode(code int) error {
@@ -52,7 +52,7 @@ func SetItem(key string, val interface{}) (err error) {
 		err = errorByCode(obj.Get("code").Int())
 		close(ch)
 	}
-	mo.Call("setItem", key, val, success, fail)
+	mo().Call("setItem", key, val, success, fail)
 	<-ch
 	return
 }
@@ -67,7 +67,7 @@ func GetItemJS(key string) (ret *js.Object, err error) {
 		err = errorByCode(obj.Get("code").Int())
 		close(ch)
 	}
-	mo.Call("getItem", key, success, fail)
+	mo().Call("getItem", key, success, fail)
 	<-ch
 	return
 }
@@ -129,7 +129,7 @@ func RemoveItem(key string) (err error) {
 		err = errorByCode(obj.Get("code").Int())
 		close(ch)
 	}
-	mo.Call("remove", key, success, fail)
+	mo().Call("remove", key, success, fail)
 	<-ch
 	return
 }
@@ -143,7 +143,7 @@ func RemoveAll() (err error) {
 		err = errorByCode(obj.Get("code").Int())
 		close(ch)
 	}
-	mo.Call("clear", success, fail)
+	mo().Call("clear", success, fail)
 	<-ch
 	return
 }
