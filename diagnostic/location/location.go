@@ -23,7 +23,7 @@ type Modes struct {
 var (
 	instance *js.Object
 
-	// Mode is an instance of LocationModes
+	// Mode is an instance of Modes
 	Mode *Modes
 )
 
