@@ -144,3 +144,89 @@ func IsNetworkLocationEnabled() (res bool, err error) {
 	<-ch
 	return
 }
+
+// GetLocationMode returns the current location mode setting for the device.
+//  Platforms: Android
+func GetLocationMode() (res string, err error) {
+	ch := make(chan struct{})
+	success := func(st string) {
+		res = st
+		close(ch)
+	}
+	fail := func(s string) {
+		err = errors.New(s)
+		close(ch)
+	}
+	mo().Call("getLocationMode", success, fail)
+	<-ch
+	return
+}
+
+// IsLocationAuthorized checks if the application is authorized to use location.
+//  Platforms: Android and iOS
+func IsLocationAuthorized() (res bool, err error) {
+	ch := make(chan struct{})
+	success := func(st bool) {
+		res = st
+		close(ch)
+	}
+	fail := func(s string) {
+		err = errors.New(s)
+		close(ch)
+	}
+	mo().Call("isLocationAuthorized", success, fail)
+	<-ch
+	return
+}
+
+// GetLocationAuthorizationStatus returns the location authorization status for the application.
+//  Platforms: Android and iOS
+func GetLocationAuthorizationStatus() (res string, err error) {
+	ch := make(chan struct{})
+	success := func(st string) {
+		res = st
+		close(ch)
+	}
+	fail := func(s string) {
+		err = errors.New(s)
+		close(ch)
+	}
+	mo().Call("getLocationAuthorizationStatus", success, fail)
+	<-ch
+	return
+}
+
+// RequestLocationAuthorization requests location authorization for the application.
+//  Platforms: Android and iOS
+func RequestLocationAuthorization(mode ...[]string) (res string, err error) {
+	ch := make(chan struct{})
+	success := func(st string) {
+		res = st
+		close(ch)
+	}
+	fail := func(s string) {
+		err = errors.New(s)
+		close(ch)
+	}
+	if len(mode) == 0 {
+		mo().Call("requestLocationAuthorization", success, fail)
+	} else {
+		mo().Call("requestLocationAuthorization", success, fail, mode[0])
+	}
+
+	<-ch
+	return
+}
+
+// SwitchToLocationSettings displays the device location settings to allow user to enable location services/change location mode.
+//  Platforms: Android and Windows 10 UWP
+func SwitchToLocationSettings() {
+	mo().Call("switchToLocationSettings")
+}
+
+// RegisterLocationStateChangeHandler registers a function to be called when a change in Location state occurs.
+// Pass in nil value to de-register the currently registered function.
+//  Platforms: Android and iOS
+func RegisterLocationStateChangeHandler(f func(string)) {
+	mo().Call("registerLocationStateChangeHandler", f)
+}
