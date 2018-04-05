@@ -49,6 +49,16 @@ func OnVolumeDownButton(cb func()) {
 	js.Global.Get("document").Call("addEventListener", "volumedownbutton", cb, false)
 }
 
+// OnSearchButton registers callback function that runs when search button is pressed
+func OnSearchButton(cb func()) {
+	js.Global.Get("document").Call("addEventListener", "searchbutton", cb, false)
+}
+
+// OnMenuButton registers callback function that runs when menu button is pressed
+func OnMenuButton(cb func()) {
+	js.Global.Get("document").Call("addEventListener", "menubutton", cb, false)
+}
+
 // UnDeviceReady clears previous OnDeviceReady registration
 func UnDeviceReady(cb func()) {
 	js.Global.Get("document").Call("removeEventListener", "deviceready", cb, false)
@@ -72,4 +82,14 @@ func UnVolumeUpButton(cb func()) {
 // UnVolumeDownButton clears previous OnVolumeDownButton registration
 func UnVolumeDownButton(cb func()) {
 	js.Global.Get("document").Call("removeEventListener", "volumedownbutton", cb, false)
+}
+
+// UnSearchButton clears previous OnSearchButton registration
+func UnSearchButton(cb func()) {
+	js.Global.Get("document").Call("removeEventListener", "searchbutton", cb, false)
+}
+
+// UnMenuButton clears previous OnMenuButton registration
+func UnMenuButton(cb func()) {
+	js.Global.Get("document").Call("removeEventListener", "menubutton", cb, false)
 }
