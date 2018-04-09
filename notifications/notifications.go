@@ -197,7 +197,7 @@ func IsTriggered(id int) (res bool) {
 	success := func(present bool) {
 		ch <- present
 	}
-	mo().Call("IsTriggered", id, success)
+	mo().Call("isTriggered", id, success)
 	return <-ch
 }
 
