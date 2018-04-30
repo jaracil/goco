@@ -18,6 +18,8 @@ type Notification struct {
 	Text      string    `js:"text"`      // Second row of the notification - Default: Empty string
 	Badge     int       `js:"badge"`     // The number currently set as the badge of the app icon in Springboard (iOS) or at the right-hand side of the local notification (Android) - Default: 0 (which means don't show a number)
 	Sound     string    `js:"sound"`     // Uri of the file containing the sound to play when an alert is displayed	- Default: res://platform_default
+	Silent    bool      `js:"silent"`    // Silent
+	Priority  int       `js:"priority"`  // Notification's priority
 	Data      string    `js:"data"`      // Arbitrary data.
 	Icon      string    `js:"icon"`      // Uri of the icon that is shown in the ticker and notification - Default: res://icon
 	SmallIcon string    `js:"smallIcon"` // Uri of the resource (only res://) to use in the notification layouts. Different classes of devices may return different sizes - Default: res://ic_popup_reminder
