@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gopherjs/gopherjs/js"
+	"github.com/jaracil/goco"
 )
 
 var (
@@ -72,7 +73,65 @@ func code2Err(code int) error {
 	return ErrUnknown
 }
 
+type Directories struct {
+	*js.Object
+
+	// ApplicationDirectory holds read-only directory where the application is installed. (iOS, Android, BlackBerry 10, OSX, windows)
+	ApplicationDirectory string `js:"applicationDirectory"`
+
+	// ApplicationStorageDirectory holds root directory of the application's sandbox;
+	// on iOS & windows this location is read-only (but specific subdirectories [like /Documents on iOS or /localState on windows] are read-write).
+	// All data contained within is private to the app. (iOS, Android, BlackBerry 10, OSX)
+	ApplicationStorageDirectory string `js:"applicationStorageDirectory"`
+
+	// DataDirectory holds persistent and private data storage within the application's sandbox using internal memory
+	// (on Android, if you need to use external memory, use .externalDataDirectory).
+	// On iOS, this directory is not synced with iCloud (use .syncedDataDirectory). (iOS, Android, BlackBerry 10, windows)
+	DataDirectory string `js:"dataDirectory"`
+
+	// CacheDirectory holds directory for cached data files or any files that your app can re-create easily.
+	// The OS may delete these files when the device runs low on storage, nevertheless, apps should not rely on the OS to delete files in here.
+	// (iOS, Android, BlackBerry 10, OSX, windows)
+	CacheDirectory string `js:"cacheDirectory"`
+
+	// ExternalApplicationStorageDirectory holds application space on external storage. (Android)
+	ExternalApplicationStorageDirectory string `js:"externalApplicationStorageDirectory"`
+
+	// ExternalDataDirectory holds where to put app-specific data files on external storage. (Android)
+	ExternalDataDirectory string `js:"externalDataDirectory"`
+
+	// ExternalCacheDirectory holds application cache on external storage. (Android)
+	ExternalCacheDirectory string `js:"externalCacheDirectory"`
+
+	// ExternalRootDirectory holds external storage (SD card) root. (Android, BlackBerry 10)
+	ExternalRootDirectory string `js:"externalRootDirectory"`
+
+	// TempDirectory holds temp directory that the OS can clear at will. Do not rely on the OS to clear this directory;
+	// your app should always remove files as applicable. (iOS, OSX, windows)
+	TempDirectory string `js:"tempDirectory"`
+
+	// SyncedDataDirectory holds directory holding app-specific files that should be synced (e.g. to iCloud). (iOS, windows)
+	SyncedDataDirectory string `js:"syncedDataDirectory"`
+
+	// DocumentsDirectory holds directory holding files private to the app, but that are meaningful to other application
+	// (e.g. Office files). Note that for OSX this is the user's ~/Documents directory. (iOS, OSX)
+	DocumentsDirectory string `js:"documentsDirectory"`
+
+	// SharedDirectory holds directory holding files globally available to all applications (BlackBerry 10)
+	SharedDirectory string `js:"sharedDirectory"`
+}
+
 var instance *js.Object
+
+// Dir holds Directories singleton
+var Dir *Directories
+
+func init() {
+	goco.OnDeviceReady(func() {
+		Dir = &Directories{Object: mo()}
+	})
+
+}
 
 func mo() *js.Object {
 	if instance == nil {
@@ -81,16 +140,18 @@ func mo() *js.Object {
 	return instance
 }
 
+// Metadata of file
 type Metadata struct {
 	*js.Object
 	ModificationTime time.Time `js:"modificationTime"`
 	Size             int       `js:"size"`
 }
 
+// FileSystem type
 type FileSystem struct {
 	*js.Object
-	Name string `js:"name"`
-	Root *Entry `js:"root"`
+	Name string          `js:"name"`
+	Root *DirectoryEntry `js:"root"`
 }
 
 // Entry serves as a base type for the FileEntry and DirectoryEntry types,
@@ -123,6 +184,16 @@ type FileEntry struct {
 	*Entry
 }
 
+// AsDirectoryEntry wraps Entry type into DirectoryEntry type. (Ensure IsDirectory property is true before calling this method)
+func (e *Entry) AsDirectoryEntry() *DirectoryEntry {
+	return &DirectoryEntry{Entry: e}
+}
+
+// AsFileEntry wraps Entry type into FileEntry type. (Ensure IsFile property is true before calling this method)
+func (e *Entry) AsFileEntry() *FileEntry {
+	return &FileEntry{Entry: e}
+}
+
 // GetMetadata obtains metadata about the file, such as its modification date and size.
 func (e *Entry) GetMetadata() (res *Metadata, err error) {
 	ch := make(chan struct{})
@@ -140,10 +211,10 @@ func (e *Entry) GetMetadata() (res *Metadata, err error) {
 }
 
 // GetParent returns a entry representing the entry's parent directory.
-func (e *Entry) GetParent() (res *Entry, err error) {
+func (e *Entry) GetParent() (res *DirectoryEntry, err error) {
 	ch := make(chan struct{})
 	success := func(ob *js.Object) {
-		res = &Entry{Object: ob}
+		res = &DirectoryEntry{Entry: &Entry{Object: ob}}
 		close(ch)
 	}
 	fail := func(code int) {
@@ -202,77 +273,26 @@ func (e *Entry) Remove() (err error) {
 	return
 }
 
+// Read returns all directory entries.
+func (d *DirectoryEntry) Read() (res []*Entry, err error) {
+	ch := make(chan struct{})
+	success := func(entrys []*Entry) {
+		res = entrys
+		close(ch)
+	}
+	fail := func(code int) {
+		err = code2Err(code)
+		close(ch)
+	}
+	reader := d.Call("createReader")
+	reader.Call("readEntries", success, fail)
+	<-ch
+	return
+}
+
 // ToURL creates and returns a URL which identifies the entry.
 func (e *Entry) ToURL() (res string) {
 	return e.Call("toURL").String()
-}
-
-// ApplicationDirectory returns read-only directory where the application is installed. (iOS, Android, BlackBerry 10, OSX, windows)
-func ApplicationDirectory() string {
-	return mo().Get("applicationDirectory").String()
-}
-
-// ApplicationStorageDirectory returns root directory of the application's sandbox;
-// on iOS & windows this location is read-only (but specific subdirectories [like /Documents on iOS or /localState on windows] are read-write).
-// All data contained within is private to the app. (iOS, Android, BlackBerry 10, OSX)
-func ApplicationStorageDirectory() string {
-	return mo().Get("applicationStorageDirectory").String()
-}
-
-// DataDirectory returns persistent and private data storage within the application's sandbox using internal memory
-// (on Android, if you need to use external memory, use .externalDataDirectory).
-// On iOS, this directory is not synced with iCloud (use .syncedDataDirectory). (iOS, Android, BlackBerry 10, windows)
-func DataDirectory() string {
-	return mo().Get("dataDirectory").String()
-}
-
-// CacheDirectory returns directory for cached data files or any files that your app can re-create easily.
-// The OS may delete these files when the device runs low on storage, nevertheless, apps should not rely on the OS to delete files in here.
-// (iOS, Android, BlackBerry 10, OSX, windows)
-func CacheDirectory() string {
-	return mo().Get("cacheDirectory").String()
-}
-
-// ExternalApplicationStorageDirectory returns application space on external storage. (Android)
-func ExternalApplicationStorageDirectory() string {
-	return mo().Get("externalApplicationStorageDirectory").String()
-}
-
-// ExternalDataDirectory returns where to put app-specific data files on external storage. (Android)
-func ExternalDataDirectory() string {
-	return mo().Get("externalDataDirectory").String()
-}
-
-// ExternalCacheDirectory returns application cache on external storage. (Android)
-func ExternalCacheDirectory() string {
-	return mo().Get("externalCacheDirectory").String()
-}
-
-// ExternalRootDirectory returns external storage (SD card) root. (Android, BlackBerry 10)
-func ExternalRootDirectory() string {
-	return mo().Get("externalRootDirectory").String()
-}
-
-// TempDirectory returns temp directory that the OS can clear at will. Do not rely on the OS to clear this directory;
-// your app should always remove files as applicable. (iOS, OSX, windows)
-func TempDirectory() string {
-	return mo().Get("tempDirectory").String()
-}
-
-// SyncedDataDirectory returns directory holding app-specific files that should be synced (e.g. to iCloud). (iOS, windows)
-func SyncedDataDirectory() string {
-	return mo().Get("syncedDataDirectory").String()
-}
-
-// DocumentsDirectory returns directory holding files private to the app, but that are meaningful to other application
-// (e.g. Office files). Note that for OSX this is the user's ~/Documents directory. (iOS, OSX)
-func DocumentsDirectory() string {
-	return mo().Get("documentsDirectory").String()
-}
-
-// SharedDirectory returns directory holding files globally available to all applications (BlackBerry 10)
-func SharedDirectory() string {
-	return mo().Get("sharedDirectory").String()
 }
 
 func ResolveLocalFileSystemURL(url string) (res *Entry, err error) {
