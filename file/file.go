@@ -154,6 +154,11 @@ type FileSystem struct {
 	Root *DirectoryEntry `js:"root"`
 }
 
+type Flags struct {
+	Create    bool
+	Exclusive bool
+}
+
 // Entry serves as a base type for the FileEntry and DirectoryEntry types,
 // which provide features specific to file system entries representing files and directories, respectively.
 type Entry struct {
@@ -182,6 +187,18 @@ type DirectoryEntry struct {
 
 type FileEntry struct {
 	*Entry
+}
+
+func (fl *Flags) jsObject() *js.Object {
+	flags := js.Global.Get("Object").New()
+	if fl != nil {
+		flags.Set("create", fl.Create)
+		flags.Set("exclusive", fl.Exclusive)
+	} else {
+		flags.Set("create", false)
+		flags.Set("exclusive", false)
+	}
+	return flags
 }
 
 // AsDirectoryEntry wraps Entry type into DirectoryEntry type. (Ensure IsDirectory property is true before calling this method)
@@ -276,8 +293,8 @@ func (e *Entry) Remove() (err error) {
 // Read returns all directory entries.
 func (d *DirectoryEntry) Read() (res []*Entry, err error) {
 	ch := make(chan struct{})
-	success := func(entrys []*Entry) {
-		res = entrys
+	success := func(entries []*Entry) {
+		res = entries
 		close(ch)
 	}
 	fail := func(code int) {
@@ -286,6 +303,93 @@ func (d *DirectoryEntry) Read() (res []*Entry, err error) {
 	}
 	reader := d.Call("createReader")
 	reader.Call("readEntries", success, fail)
+	<-ch
+	return
+}
+
+// GetDirectory returns a DirectoryEntry instance corresponding to a directory contained somewhere within the directory subtree
+// rooted at the directory on which it's called.
+func (d *DirectoryEntry) GetDirectory(path string, fl *Flags) (res *DirectoryEntry, err error) {
+	ch := make(chan struct{})
+	success := func(ob *js.Object) {
+		res = &DirectoryEntry{Entry: &Entry{Object: ob}}
+		close(ch)
+	}
+	fail := func(code int) {
+		err = code2Err(code)
+		close(ch)
+	}
+	d.Call("getDirectory", path, fl.jsObject(), success, fail)
+	<-ch
+	return
+}
+
+// GetFile returns a FileEntry instance corresponding to a file contained somewhere within the directory subtree
+// rooted at the directory on which it's called.
+func (d *DirectoryEntry) GetFile(path string, fl *Flags) (res *FileEntry, err error) {
+	ch := make(chan struct{})
+	success := func(ob *js.Object) {
+		res = &FileEntry{Entry: &Entry{Object: ob}}
+		close(ch)
+	}
+	fail := func(code int) {
+		err = code2Err(code)
+		close(ch)
+	}
+	d.Call("getFile", path, fl.jsObject(), success, fail)
+	<-ch
+	return
+}
+
+func (f *FileEntry) createWriter() (res *js.Object, err error) {
+	ch := make(chan struct{})
+	success := func(ob *js.Object) {
+		res = ob
+		close(ch)
+	}
+	fail := func(code int) {
+		err = code2Err(code)
+		close(ch)
+	}
+	f.Call("createWriter", success, fail)
+	<-ch
+	return
+}
+
+func (f *FileEntry) Write(data []byte) (err error) {
+	writer, err := f.createWriter()
+	if err != nil {
+		return err
+	}
+	ch := make(chan struct{})
+	success := func() {
+		close(ch)
+	}
+	fail := func(code int) {
+		err = code2Err(code)
+		close(ch)
+	}
+	writer.Set("onwriteend", success)
+	writer.Set("onerror", fail)
+	writer.Call("write", data)
+	<-ch
+	return
+}
+
+func (f *FileEntry) Read() (res []byte, err error) {
+	reader := js.Global.Get("FileReader").New()
+	ch := make(chan struct{})
+	success := func() {
+		res = reader.Get("result").Interface().([]byte)
+		close(ch)
+	}
+	fail := func(code int) {
+		err = code2Err(code)
+		close(ch)
+	}
+	reader.Set("onloadend", success)
+	reader.Set("onerror", fail)
+	reader.Call("readAsArrayBuffer", f)
 	<-ch
 	return
 }
