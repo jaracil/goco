@@ -6,6 +6,7 @@ package file
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/gopherjs/gopherjs/js"
@@ -25,7 +26,6 @@ var (
 	ErrQuotaExceeded         = errors.New("Quota exceeded error")
 	ErrTypeMismatch          = errors.New("Type mismatch error")
 	ErrPathExists            = errors.New("Path exists error")
-	ErrUnknown               = errors.New("Unknown error")
 )
 
 const (
@@ -43,8 +43,8 @@ const (
 	PathExistsErrVal            = 12
 )
 
-func code2Err(code int) error {
-	switch code {
+func (fe *FileError) Error() error {
+	switch fe.Code {
 	case NotFoundErrVal:
 		return ErrNotFound
 	case SecurityErrVal:
@@ -70,7 +70,7 @@ func code2Err(code int) error {
 	case PathExistsErrVal:
 		return ErrPathExists
 	}
-	return ErrUnknown
+	return fmt.Errorf("Unknown error: %d", fe.Code)
 }
 
 type Directories struct {
@@ -135,7 +135,7 @@ func init() {
 
 func mo() *js.Object {
 	if instance == nil {
-		instance = js.Global.Get("file")
+		instance = js.Global.Get("cordova").Get("file")
 	}
 	return instance
 }
@@ -152,6 +152,11 @@ type FileSystem struct {
 	*js.Object
 	Name string          `js:"name"`
 	Root *DirectoryEntry `js:"root"`
+}
+
+type FileError struct {
+	*js.Object
+	Code int `js:"code"`
 }
 
 type Flags struct {
@@ -214,12 +219,12 @@ func (e *Entry) AsFileEntry() *FileEntry {
 // GetMetadata obtains metadata about the file, such as its modification date and size.
 func (e *Entry) GetMetadata() (res *Metadata, err error) {
 	ch := make(chan struct{})
-	success := func(ob *js.Object) {
-		res = &Metadata{Object: ob}
+	success := func(md *Metadata) {
+		res = md
 		close(ch)
 	}
-	fail := func(code int) {
-		err = code2Err(code)
+	fail := func(e *FileError) {
+		err = e.Error()
 		close(ch)
 	}
 	e.Call("getMetadata", success, fail)
@@ -230,12 +235,12 @@ func (e *Entry) GetMetadata() (res *Metadata, err error) {
 // GetParent returns a entry representing the entry's parent directory.
 func (e *Entry) GetParent() (res *DirectoryEntry, err error) {
 	ch := make(chan struct{})
-	success := func(ob *js.Object) {
-		res = &DirectoryEntry{Entry: &Entry{Object: ob}}
+	success := func(de *DirectoryEntry) {
+		res = de
 		close(ch)
 	}
-	fail := func(code int) {
-		err = code2Err(code)
+	fail := func(e *FileError) {
+		err = e.Error()
 		close(ch)
 	}
 	e.Call("getParent", success, fail)
@@ -246,12 +251,12 @@ func (e *Entry) GetParent() (res *DirectoryEntry, err error) {
 // CopyTo copies the file specified by the entry to a new target location on the file system.
 func (e *Entry) CopyTo(target *Entry) (res *Entry, err error) {
 	ch := make(chan struct{})
-	success := func(ob *js.Object) {
-		res = &Entry{Object: ob}
+	success := func(en *Entry) {
+		res = en
 		close(ch)
 	}
-	fail := func(code int) {
-		err = code2Err(code)
+	fail := func(e *FileError) {
+		err = e.Error()
 		close(ch)
 	}
 	e.Call("copyTo", target, success, fail)
@@ -262,12 +267,12 @@ func (e *Entry) CopyTo(target *Entry) (res *Entry, err error) {
 // MoveTo moves the file or directory to a new location on the file system, or renames the file or directory.
 func (e *Entry) MoveTo(target *Entry) (res *Entry, err error) {
 	ch := make(chan struct{})
-	success := func(ob *js.Object) {
-		res = &Entry{Object: ob}
+	success := func(en *Entry) {
+		res = en
 		close(ch)
 	}
-	fail := func(code int) {
-		err = code2Err(code)
+	fail := func(e *FileError) {
+		err = e.Error()
 		close(ch)
 	}
 	e.Call("moveTo", target, success, fail)
@@ -281,8 +286,8 @@ func (e *Entry) Remove() (err error) {
 	success := func() {
 		close(ch)
 	}
-	fail := func(code int) {
-		err = code2Err(code)
+	fail := func(e *FileError) {
+		err = e.Error()
 		close(ch)
 	}
 	e.Call("remove", success, fail)
@@ -297,8 +302,8 @@ func (d *DirectoryEntry) Read() (res []*Entry, err error) {
 		res = entries
 		close(ch)
 	}
-	fail := func(code int) {
-		err = code2Err(code)
+	fail := func(e *FileError) {
+		err = e.Error()
 		close(ch)
 	}
 	reader := d.Call("createReader")
@@ -311,12 +316,12 @@ func (d *DirectoryEntry) Read() (res []*Entry, err error) {
 // rooted at the directory on which it's called.
 func (d *DirectoryEntry) GetDirectory(path string, fl *Flags) (res *DirectoryEntry, err error) {
 	ch := make(chan struct{})
-	success := func(ob *js.Object) {
-		res = &DirectoryEntry{Entry: &Entry{Object: ob}}
+	success := func(de *DirectoryEntry) {
+		res = de
 		close(ch)
 	}
-	fail := func(code int) {
-		err = code2Err(code)
+	fail := func(e *FileError) {
+		err = e.Error()
 		close(ch)
 	}
 	d.Call("getDirectory", path, fl.jsObject(), success, fail)
@@ -328,12 +333,12 @@ func (d *DirectoryEntry) GetDirectory(path string, fl *Flags) (res *DirectoryEnt
 // rooted at the directory on which it's called.
 func (d *DirectoryEntry) GetFile(path string, fl *Flags) (res *FileEntry, err error) {
 	ch := make(chan struct{})
-	success := func(ob *js.Object) {
-		res = &FileEntry{Entry: &Entry{Object: ob}}
+	success := func(fe *FileEntry) {
+		res = fe
 		close(ch)
 	}
-	fail := func(code int) {
-		err = code2Err(code)
+	fail := func(e *FileError) {
+		err = e.Error()
 		close(ch)
 	}
 	d.Call("getFile", path, fl.jsObject(), success, fail)
@@ -347,11 +352,22 @@ func (f *FileEntry) createWriter() (res *js.Object, err error) {
 		res = ob
 		close(ch)
 	}
-	fail := func(code int) {
-		err = code2Err(code)
+	fail := func(e *FileError) {
+		err = e.Error()
 		close(ch)
 	}
 	f.Call("createWriter", success, fail)
+	<-ch
+	return
+}
+
+func (f *FileEntry) file() (res *js.Object) {
+	ch := make(chan struct{})
+	success := func(ob *js.Object) {
+		res = ob
+		close(ch)
+	}
+	f.Call("file", success)
 	<-ch
 	return
 }
@@ -365,31 +381,35 @@ func (f *FileEntry) Write(data []byte) (err error) {
 	success := func() {
 		close(ch)
 	}
-	fail := func(code int) {
-		err = code2Err(code)
+	fail := func(e *FileError) {
+		err = e.Error()
 		close(ch)
 	}
 	writer.Set("onwriteend", success)
 	writer.Set("onerror", fail)
-	writer.Call("write", data)
+	buffer := js.Global.Get("Uint8Array").New(data).Get("buffer")
+	blob := js.Global.Get("Blob").New([]*js.Object{buffer}, map[string]interface{}{"type": ""})
+	writer.Call("write", blob)
 	<-ch
 	return
 }
 
 func (f *FileEntry) Read() (res []byte, err error) {
 	reader := js.Global.Get("FileReader").New()
+	blob := f.file()
 	ch := make(chan struct{})
 	success := func() {
-		res = reader.Get("result").Interface().([]byte)
+		arrayBuffer := reader.Get("result")
+		res = js.Global.Get("Uint8Array").New(arrayBuffer).Interface().([]byte)
 		close(ch)
 	}
-	fail := func(code int) {
-		err = code2Err(code)
+	fail := func(e *FileError) {
+		err = e.Error()
 		close(ch)
 	}
 	reader.Set("onloadend", success)
 	reader.Set("onerror", fail)
-	reader.Call("readAsArrayBuffer", f)
+	reader.Call("readAsArrayBuffer", blob)
 	<-ch
 	return
 }
@@ -399,14 +419,15 @@ func (e *Entry) ToURL() (res string) {
 	return e.Call("toURL").String()
 }
 
+// ResolveLocalFileSystemURL retrieves a Entry instance based on it's local URL
 func ResolveLocalFileSystemURL(url string) (res *Entry, err error) {
 	ch := make(chan struct{})
 	success := func(ob *js.Object) {
 		res = &Entry{Object: ob}
 		close(ch)
 	}
-	fail := func(code int) {
-		err = code2Err(code)
+	fail := func(e *FileError) {
+		err = e.Error()
 		close(ch)
 	}
 	js.Global.Call("resolveLocalFileSystemURL", url, success, fail)
@@ -417,14 +438,14 @@ func ResolveLocalFileSystemURL(url string) (res *Entry, err error) {
 // RequestFileSystem requests a file system where data should be stored.
 // typ is the storage type of the file system.
 // size is the storage space—in bytes—that you need for your app.
-func RequestFileSystem(typ string, size int) (res *FileSystem, err error) {
+func RequestFileSystem(typ int, size int) (res *FileSystem, err error) {
 	ch := make(chan struct{})
 	success := func(ob *js.Object) {
 		res = &FileSystem{Object: ob}
 		close(ch)
 	}
-	fail := func(code int) {
-		err = code2Err(code)
+	fail := func(e *FileError) {
+		err = e.Error()
 		close(ch)
 	}
 	js.Global.Call("requestFileSystem", typ, size, success, fail)
