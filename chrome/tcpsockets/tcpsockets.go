@@ -5,6 +5,8 @@
 // Install plugin:
 //  cordova plugin add cordova-plugin-chrome-apps-sockets-tcp
 //
+// Compatible with "net.Conn" interface.
+//
 // (Incomplete implementation, missing "setPaused", "setKeepAlive", "setNoDelay", "getSockets)
 package tcpsockets
 
