@@ -118,7 +118,7 @@ func (c conn) Write(b []byte) (n int, err error) {
 	if res.res >= 0 {
 		return res.bytes, nil
 	}
-	return 0, errors.New(fmt.Sprintf("send error %d", res.res))
+	return 0, errors.New(fmt.Sprintf("chrome.sockets.tcp error: Send error %d", res.res))
 }
 
 func (c conn) Read(receive []byte) (n int, err error) {
@@ -152,7 +152,7 @@ func (c conn) Read(receive []byte) (n int, err error) {
 		}
 		return len(b), nil
 	case resCode := <-c.readErrorCh:
-		return 0, errors.New(fmt.Sprintf("recieve error %d", resCode))
+		return 0, errors.New(fmt.Sprintf("chrome.sockets.tcp error: Recieve error %d", resCode))
 	}
 
 	return 0, ErrReadFailed
