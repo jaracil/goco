@@ -7,30 +7,35 @@
 //
 // Compatible with "net.Conn" interface.
 //
-// (Incomplete implementation, missing "setPaused", "setKeepAlive", "setNoDelay", "getSockets)
+// (Incomplete implementation, missing "setNoDelay", "getSockets", "secures")
 package tcpsockets
 
 import (
-	"errors"
 	"fmt"
+	"io"
 	"net"
 	"time"
 
 	"github.com/gopherjs/gopherjs/js"
+	"github.com/pkg/errors"
 )
 
 var (
 	ErrPluginNotFound   = errors.New("chrome.sockets.tcp error: Plugin not found")
 	ErrConnectionFailed = errors.New("chrome.sockets.tcp error: Cannot connect")
 	ErrReadFailed       = errors.New("chrome.sockets.tcp error: Cannot read")
+	ErrKeepAlive        = errors.New("chrome.sockets.tcp error: Keep alive error")
 )
 
+type PipeStruct struct {
+	w *io.PipeWriter
+	r *io.PipeReader
+}
+
 type conn struct {
-	socketID    int
-	ipport      string
-	readCh      chan []byte
-	readPending chan []byte
-	readErrorCh chan int
+	socketID int
+	ipport   string
+	readPipe PipeStruct
 }
 
 type addr struct {
@@ -75,27 +80,29 @@ func (c *conn) Connect(peerAddress string, peerPort int) error {
 	mo().Call("connect", c.socketID, peerAddress, peerPort, connCallback)
 
 	readCallback := func(obj *js.Object) {
-		var b []byte
-		b = js.Global.Get("Uint8Array").New(obj.Get("data")).Interface().([]byte)
-		go func() { c.readCh <- b }()
+		res := js.Global.Get("Uint8Array").New(obj.Get("data")).Interface().([]byte)
+		go func() {
+			if _, err := c.readPipe.w.Write(res); err != nil {
+				println("pipe write error", err)
+			}
+		}()
 	}
 
 	readErrorCallback := func(obj *js.Object) {
-		var resultCode int
-		resultCode = obj.Get("data").Int()
-		go func() { c.readErrorCh <- resultCode }()
+		resultCode := obj.Get("data").Int()
+		go func() {
+			println("Error reading TCP socket: ", resultCode)
+			c.SetPaused(true)
+		}()
 	}
 
 	result := <-ch
 	if result >= 0 {
-		c.readCh = make(chan []byte)
-		c.readPending = make(chan []byte)
+		c.readPipe.r, c.readPipe.w = io.Pipe()
 		mo().Get("onReceive").Call("addListener", readCallback)
-		c.readErrorCh = make(chan int)
 		mo().Get("onReceiveError").Call("addListener", readErrorCallback)
 		return nil
 	}
-
 	return ErrConnectionFailed
 }
 
@@ -122,40 +129,8 @@ func (c conn) Write(b []byte) (n int, err error) {
 }
 
 func (c conn) Read(receive []byte) (n int, err error) {
-	select {
-	case b := <-c.readPending:
-		if len(b) > len(receive) {
-			extra := b[len(receive):]
-			b = b[:len(receive)]
-			go func() {
-				c.readPending <- extra
-			}()
-		}
-		for i, x := range b {
-			receive[i] = x
-		}
-		return len(b), nil
-	default:
-	}
-
-	select {
-	case b := <-c.readCh:
-		if len(b) > len(receive) {
-			extra := b[len(receive):]
-			b = b[:len(receive)]
-			go func() {
-				c.readPending <- extra
-			}()
-		}
-		for i, x := range b {
-			receive[i] = x
-		}
-		return len(b), nil
-	case resCode := <-c.readErrorCh:
-		return 0, errors.New(fmt.Sprintf("chrome.sockets.tcp error: Recieve error %d", resCode))
-	}
-
-	return 0, ErrReadFailed
+	n, err = c.readPipe.r.Read(receive)
+	return n, errors.Wrap(err, ErrReadFailed.Error())
 }
 
 func (c conn) LocalAddr() net.Addr  { return addr{} }
@@ -165,13 +140,27 @@ func (c conn) SetDeadline(time.Time) error      { return nil }
 func (c conn) SetReadDeadline(time.Time) error  { return nil }
 func (c conn) SetWriteDeadline(time.Time) error { return nil }
 
-// Update func updates the socket properties.
 func (c conn) Update(socketID int, properties interface{}, cb func()) {
 	mo().Call("update", socketID, properties, cb)
 }
 
 func (c conn) SetPaused(paused bool) {
-	mo().Call("paused", c.socketID, paused)
+	mo().Call("setPaused", c.socketID, paused)
+}
+
+func (c conn) SetKeepAlive(enable bool, delaySeconds int) (int, error) {
+	ch := make(chan int)
+	keepAliveCallback := func(obj *js.Object) {
+		go func() { ch <- obj.Get("result").Int() }()
+	}
+
+	mo().Call("setKeepAlive", c.socketID, enable, delaySeconds, keepAliveCallback)
+
+	res := <-ch
+	if res >= 0 {
+		return res, nil
+	}
+	return -1, ErrKeepAlive
 }
 
 func (c conn) GetInfo() interface{} {
