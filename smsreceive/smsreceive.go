@@ -3,7 +3,7 @@
 // Install plugin:
 //  cordova plugin add cordova-plugin-sms-receive
 
-package sms
+package smsreceive
 
 import (
 	"errors"
