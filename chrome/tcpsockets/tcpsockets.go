@@ -79,21 +79,19 @@ func (c *conn) Connect(peerAddress string, peerPort int) error {
 	c.ipport = fmt.Sprintf("%s:%d", peerAddress, peerPort)
 	mo().Call("connect", c.socketID, peerAddress, peerPort, connCallback)
 
+	readCh := make(chan []byte, 100)
+	readErrorCh := make(chan int)
 	readCallback := func(obj *js.Object) {
 		res := js.Global.Get("Uint8Array").New(obj.Get("data")).Interface().([]byte)
-		go func() {
-			if _, err := c.readPipe.w.Write(res); err != nil {
-				println("pipe write error", err)
-			}
-		}()
+		select {
+		case readCh <- res:
+		default:
+		}
 	}
 
 	readErrorCallback := func(obj *js.Object) {
 		resultCode := obj.Get("data").Int()
-		go func() {
-			println("Error reading TCP socket: ", resultCode)
-			c.SetPaused(true)
-		}()
+		go func() { readErrorCh <- resultCode }()
 	}
 
 	result := <-ch
@@ -101,6 +99,24 @@ func (c *conn) Connect(peerAddress string, peerPort int) error {
 		c.readPipe.r, c.readPipe.w = io.Pipe()
 		mo().Get("onReceive").Call("addListener", readCallback)
 		mo().Get("onReceiveError").Call("addListener", readErrorCallback)
+
+		go func() {
+		loop:
+			for {
+				select {
+				case receive, ok := <-readCh:
+					if _, err := c.readPipe.w.Write(receive); err != nil && ok {
+						println("chrome.sockets.tcp error: pipe write error: ", err)
+					}
+				case resultCode := <-readErrorCh:
+					close(readCh)
+					close(readErrorCh)
+					c.readPipe.w.Close()
+					println("chrome.sockets.tcp error: reading error ", resultCode)
+					break loop
+				}
+			}
+		}()
 		return nil
 	}
 	return ErrConnectionFailed
