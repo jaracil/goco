@@ -21,11 +21,79 @@ import (
 )
 
 var (
-	ErrPluginNotFound   = errors.New("chrome.sockets.tcp error: Plugin not found")
-	ErrConnectionFailed = errors.New("chrome.sockets.tcp error: Cannot connect")
-	ErrReadFailed       = errors.New("chrome.sockets.tcp error: Cannot read")
-	ErrKeepAlive        = errors.New("chrome.sockets.tcp error: Keep alive error")
+	ErrPluginNotFound       = errors.New("chrome.sockets.tcp error: Plugin not found")
+	ErrConnectionTimedOut   = errors.New("chrome.sockets.tcp error: A connection attempt timed out")
+	ErrConnectionClosed     = errors.New("chrome.sockets.tcp error: Connection closed")
+	ErrConnectionReset      = errors.New("chrome.sockets.tcp error: Connection reset")
+	ErrConnectionRefused    = errors.New("chrome.sockets.tcp error: Connection refused")
+	ErrConnectionFailed     = errors.New("chrome.sockets.tcp error: Connection failed")
+	ErrNameNotResolved      = errors.New("chrome.sockets.tcp error: The host name could not be resolved")
+	ErrInternetDisconnected = errors.New("chrome.sockets.tcp error: The Internet connection has been lost")
+	ErrGenericFailure       = errors.New("chrome.sockets.tcp error: A generic failure occurred")
+	ErrAlreadyConnected     = errors.New("chrome.sockets.tcp error: The socket is already connected")
+	ErrInvalidAddress       = errors.New("chrome.sockets.tcp error: The IP address or port number is invalid")
+	ErrUnreachableAddress   = errors.New("chrome.sockets.tcp error: The IP address is unreachable")
+	ErrConnectionWasClosed  = errors.New("chrome.sockets.tcp error: A connection was closed")
+	ErrPipeReadFailed       = errors.New("chrome.sockets.tcp error: Cannot read")
+	ErrKeepAlive            = errors.New("chrome.sockets.tcp error: Keep alive error")
+	ErrWsProtocolError      = errors.New("chrome.sockets.tcp error: Websocket protocol error")
+	ErrAddressInUse         = errors.New("chrome.sockets.tcp error: Address is already in use")
 )
+
+const (
+	NotFoundErrVal          = -1
+	GenericFailureVal       = -2
+	AlreadyConnectedVal     = -23
+	ConnectionClosedVal     = -100
+	ConnectionResetVal      = -101
+	ConnectionRefusedVal    = -102
+	ConnectionFailedVal     = -104
+	NameNotResolvedVal      = -105
+	InternetDisconnectedVal = -106
+	ConnectionTimedOutVal   = -118
+	InvalidAddressVal       = -108
+	UnreachableAddressVal   = -109
+	WsProtocolErrorVal      = -145
+	AddressInUseVal         = -147
+)
+
+func (sTcpError *socketTCPError) Error() error {
+	switch sTcpError.ResultCode {
+	case NotFoundErrVal:
+		return ErrPluginNotFound
+	case ConnectionClosedVal:
+		return ErrConnectionClosed
+	case ConnectionResetVal:
+		return ErrConnectionReset
+	case ConnectionRefusedVal:
+		return ErrConnectionRefused
+	case ConnectionFailedVal:
+		return ErrConnectionFailed
+	case NameNotResolvedVal:
+		return ErrNameNotResolved
+	case InternetDisconnectedVal:
+		return ErrInternetDisconnected
+	case ConnectionTimedOutVal:
+		return ErrConnectionTimedOut
+	case InvalidAddressVal:
+		return ErrInvalidAddress
+	case UnreachableAddressVal:
+		return ErrUnreachableAddress
+	case GenericFailureVal:
+		return ErrGenericFailure
+	case AlreadyConnectedVal:
+		return ErrAlreadyConnected
+	case WsProtocolErrorVal:
+		return ErrWsProtocolError
+	case AddressInUseVal:
+		return ErrAddressInUse
+	}
+	return fmt.Errorf("Unknown error: %d", sTcpError.ResultCode)
+}
+
+type socketTCPError struct {
+	ResultCode int
+}
 
 type PipeStruct struct {
 	w *io.PipeWriter
@@ -33,9 +101,10 @@ type PipeStruct struct {
 }
 
 type conn struct {
-	socketID int
-	ipport   string
-	readPipe PipeStruct
+	socketID    int
+	ipport      string
+	readPipe    PipeStruct
+	socketError error
 }
 
 type addr struct {
@@ -70,28 +139,33 @@ func Create() (conn, error) {
 	return conn{socketID: socketID}, nil
 }
 
-func (c *conn) Connect(peerAddress string, peerPort int) error {
+func (c *conn) Connect(peerAddress string, peerPort int) (err error) {
 	ch := make(chan int)
 	connCallback := func(obj *js.Object) {
-		ch <- obj.Int()
+		go func() { ch <- obj.Int() }()
 	}
 
 	c.ipport = fmt.Sprintf("%s:%d", peerAddress, peerPort)
 	mo().Call("connect", c.socketID, peerAddress, peerPort, connCallback)
 
 	readCh := make(chan []byte, 100)
-	readErrorCh := make(chan int)
 	readCallback := func(obj *js.Object) {
 		res := js.Global.Get("Uint8Array").New(obj.Get("data")).Interface().([]byte)
 		select {
 		case readCh <- res:
 		default:
+			c.Close()
 		}
 	}
 
+	readErrorCh := make(chan *socketTCPError, 1)
 	readErrorCallback := func(obj *js.Object) {
-		resultCode := obj.Get("data").Int()
-		go func() { readErrorCh <- resultCode }()
+		resultCode := obj.Get("resultCode").Int()
+		socketTcpErr := &socketTCPError{ResultCode: resultCode}
+		select {
+		case readErrorCh <- socketTcpErr:
+		default:
+		}
 	}
 
 	result := <-ch
@@ -101,30 +175,36 @@ func (c *conn) Connect(peerAddress string, peerPort int) error {
 		mo().Get("onReceiveError").Call("addListener", readErrorCallback)
 
 		go func() {
-		loop:
+			exit := false
 			for {
 				select {
-				case receive, ok := <-readCh:
-					if _, err := c.readPipe.w.Write(receive); err != nil && ok {
-						println("chrome.sockets.tcp error: pipe write error: ", err)
+				case receive := <-readCh:
+					if _, e := c.readPipe.w.Write(receive); e != nil {
+						err = e
+						exit = true
 					}
-				case resultCode := <-readErrorCh:
-					close(readCh)
-					close(readErrorCh)
+				case res := <-readErrorCh:
+					err = res.Error()
+					c.socketError = res.Error()
+					exit = true
+					break
+				}
+				if exit {
+					readCh = nil
+					readErrorCh = nil
 					c.readPipe.w.Close()
-					println("chrome.sockets.tcp error: reading error ", resultCode)
-					break loop
+					break
 				}
 			}
 		}()
-		return nil
+		return err
 	}
 	return ErrConnectionFailed
 }
 
 func (c conn) Close() error {
 	mo().Call("disconnect", c.socketID)
-	return nil
+	return c.socketError
 }
 
 func (c conn) Write(b []byte) (n int, err error) {
@@ -146,7 +226,7 @@ func (c conn) Write(b []byte) (n int, err error) {
 
 func (c conn) Read(receive []byte) (n int, err error) {
 	n, err = c.readPipe.r.Read(receive)
-	return n, errors.Wrap(err, ErrReadFailed.Error())
+	return n, errors.Wrap(err, ErrPipeReadFailed.Error())
 }
 
 func (c conn) LocalAddr() net.Addr  { return addr{} }
