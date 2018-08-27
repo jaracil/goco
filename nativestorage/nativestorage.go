@@ -25,6 +25,14 @@ func init() {
 	})
 }
 
+func safeClose(ch chan struct{}) {
+	select {
+		case <- ch:
+		default:
+			close(ch)
+	}
+}
+
 func errorByCode(code int) error {
 	switch code {
 	case 1:
@@ -46,11 +54,11 @@ func errorByCode(code int) error {
 func SetItem(key string, val interface{}) (err error) {
 	ch := make(chan struct{})
 	success := func() {
-		close(ch)
+		safeClose(ch)
 	}
 	fail := func(obj *js.Object) {
 		err = errorByCode(obj.Get("code").Int())
-		close(ch)
+		safeClose(ch)
 	}
 	mo.Call("setItem", key, val, success, fail)
 	<-ch
@@ -61,11 +69,11 @@ func GetItemJS(key string) (ret *js.Object, err error) {
 	ch := make(chan struct{})
 	success := func(obj *js.Object) {
 		ret = obj
-		close(ch)
+		safeClose(ch)
 	}
 	fail := func(obj *js.Object) {
 		err = errorByCode(obj.Get("code").Int())
-		close(ch)
+		safeClose(ch)
 	}
 	mo.Call("getItem", key, success, fail)
 	<-ch
@@ -123,11 +131,11 @@ func GetBool(key string) (bool, error) {
 func RemoveItem(key string) (err error) {
 	ch := make(chan struct{})
 	success := func() {
-		close(ch)
+		safeClose(ch)
 	}
 	fail := func(obj *js.Object) {
 		err = errorByCode(obj.Get("code").Int())
-		close(ch)
+		safeClose(ch)
 	}
 	mo.Call("remove", key, success, fail)
 	<-ch
@@ -137,11 +145,11 @@ func RemoveItem(key string) (err error) {
 func RemoveAll() (err error) {
 	ch := make(chan struct{})
 	success := func() {
-		close(ch)
+		safeClose(ch)
 	}
 	fail := func(obj *js.Object) {
 		err = errorByCode(obj.Get("code").Int())
-		close(ch)
+		safeClose(ch)
 	}
 	mo.Call("clear", success, fail)
 	<-ch
