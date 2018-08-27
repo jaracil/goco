@@ -39,17 +39,57 @@ func OnResume(cb func()) {
 	js.Global.Get("document").Call("addEventListener", "resume", cb, false)
 }
 
-// UnDeviceReady clears the previous OnDeviceReady registration
+// OnVolumeUpButton registers callback function that runs when volume-up button is pressed
+func OnVolumeUpButton(cb func()) {
+	js.Global.Get("document").Call("addEventListener", "volumeupbutton", cb, false)
+}
+
+// OnVolumeDownButton registers callback function that runs when volume-down button is pressed
+func OnVolumeDownButton(cb func()) {
+	js.Global.Get("document").Call("addEventListener", "volumedownbutton", cb, false)
+}
+
+// OnSearchButton registers callback function that runs when search button is pressed
+func OnSearchButton(cb func()) {
+	js.Global.Get("document").Call("addEventListener", "searchbutton", cb, false)
+}
+
+// OnMenuButton registers callback function that runs when menu button is pressed
+func OnMenuButton(cb func()) {
+	js.Global.Get("document").Call("addEventListener", "menubutton", cb, false)
+}
+
+// UnDeviceReady clears previous OnDeviceReady registration
 func UnDeviceReady(cb func()) {
 	js.Global.Get("document").Call("removeEventListener", "deviceready", cb, false)
 }
 
-// UnPause clears the previous OnPause registration
+// UnPause clears previous OnPause registration
 func UnPause(cb func()) {
 	js.Global.Get("document").Call("removeEventListener", "pause", cb, false)
 }
 
-// UnResume clears the previous OnResume registration
+// UnResume clears previous OnResume registration
 func UnResume(cb func()) {
 	js.Global.Get("document").Call("removeEventListener", "resume", cb, false)
+}
+
+// UnVolumeUpButton clears previous OnVolumeUpButton registration
+func UnVolumeUpButton(cb func()) {
+	js.Global.Get("document").Call("removeEventListener", "volumeupbutton", cb, false)
+}
+
+// UnVolumeDownButton clears previous OnVolumeDownButton registration
+func UnVolumeDownButton(cb func()) {
+	js.Global.Get("document").Call("removeEventListener", "volumedownbutton", cb, false)
+}
+
+// UnSearchButton clears previous OnSearchButton registration
+func UnSearchButton(cb func()) {
+	js.Global.Get("document").Call("removeEventListener", "searchbutton", cb, false)
+}
+
+// UnMenuButton clears previous OnMenuButton registration
+func UnMenuButton(cb func()) {
+	js.Global.Get("document").Call("removeEventListener", "menubutton", cb, false)
 }

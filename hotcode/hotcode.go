@@ -11,7 +11,6 @@ import (
 	"fmt"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/jaracil/goco"
 )
 
 // Options used for FetchUpdate
@@ -21,12 +20,13 @@ type Options struct {
 	RequestHeaders map[string]string `js:"requestHeaders"`
 }
 
-var mo *js.Object
+var instance *js.Object
 
-func init() {
-	goco.OnDeviceReady(func() {
-		mo = js.Global.Get("chcp")
-	})
+func mo() *js.Object {
+	if instance == nil {
+		instance = js.Global.Get("chcp")
+	}
+	return instance
 }
 
 // NewOptions creates options object for FetchUpdate
@@ -36,7 +36,7 @@ func NewOptions() *Options {
 
 // FetchUpdate downloads an update
 func FetchUpdate(opts ...*Options) (data interface{}, err error) {
-	if mo == nil {
+	if mo() == nil {
 		return nil, errors.New("Cannot find chcp object")
 	}
 
@@ -53,7 +53,7 @@ func FetchUpdate(opts ...*Options) (data interface{}, err error) {
 	}
 
 	ch := make(chan struct{})
-	mo.Call("fetchUpdate", func(cbErr, cbData *js.Object) {
+	mo().Call("fetchUpdate", func(cbErr, cbData *js.Object) {
 		if cbErr != nil {
 			err = fmt.Errorf("Error on fetchUpdate: code=%v, description=%v", cbErr.Get("code"), cbErr.Get("description"))
 		}
@@ -66,12 +66,12 @@ func FetchUpdate(opts ...*Options) (data interface{}, err error) {
 
 // InstallUpdate installs downloaded update
 func InstallUpdate() (err error) {
-	if mo == nil {
+	if mo() == nil {
 		return errors.New("Cannot find chcp object")
 	}
 
 	ch := make(chan struct{})
-	mo.Call("installUpdate", func(cbErr *js.Object) {
+	mo().Call("installUpdate", func(cbErr *js.Object) {
 		if cbErr != nil {
 			err = fmt.Errorf("Error on installUpdate: code=%v, description=%v", cbErr.Get("code"), cbErr.Get("description"))
 		}

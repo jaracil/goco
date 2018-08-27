@@ -8,7 +8,6 @@ import (
 	"errors"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/jaracil/goco"
 )
 
 // Coords defines a set of geographic coordinates.
@@ -35,12 +34,13 @@ type Watcher struct {
 	*js.Object
 }
 
-var mo *js.Object
+var instance *js.Object
 
-func init() {
-	goco.OnDeviceReady(func() {
-		mo = js.Global.Get("navigator").Get("geolocation")
-	})
+func mo() *js.Object {
+	if instance == nil {
+		instance = js.Global.Get("navigator").Get("geolocation")
+	}
+	return instance
 }
 
 // CurrentPosition returns current device's position.
@@ -57,7 +57,7 @@ func CurrentPosition(options interface{}) (pos *Position, err error) {
 		close(ch)
 	}
 
-	mo.Call("getCurrentPosition", success, fail, options)
+	mo().Call("getCurrentPosition", success, fail, options)
 	<-ch
 	return
 }
@@ -75,11 +75,11 @@ func NewWatcher(cb func(pos *Position, err error), options interface{}) *Watcher
 		cb(nil, err)
 	}
 
-	id := mo.Call("watchPosition", success, fail, options)
+	id := mo().Call("watchPosition", success, fail, options)
 	return &Watcher{Object: id}
 }
 
 // Close cancels tracking watcher
 func (w *Watcher) Close() {
-	mo.Call("clearWatch", w)
+	mo().Call("clearWatch", w)
 }

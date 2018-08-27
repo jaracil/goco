@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/jaracil/goco"
 )
 
 // Notification type contains all information about one notification.
@@ -19,6 +18,8 @@ type Notification struct {
 	Text      string    `js:"text"`      // Second row of the notification - Default: Empty string
 	Badge     int       `js:"badge"`     // The number currently set as the badge of the app icon in Springboard (iOS) or at the right-hand side of the local notification (Android) - Default: 0 (which means don't show a number)
 	Sound     string    `js:"sound"`     // Uri of the file containing the sound to play when an alert is displayed	- Default: res://platform_default
+	Silent    bool      `js:"silent"`    // Silent
+	Priority  int       `js:"priority"`  // Notification's priority
 	Data      string    `js:"data"`      // Arbitrary data.
 	Icon      string    `js:"icon"`      // Uri of the icon that is shown in the ticker and notification - Default: res://icon
 	SmallIcon string    `js:"smallIcon"` // Uri of the resource (only res://) to use in the notification layouts. Different classes of devices may return different sizes - Default: res://ic_popup_reminder
@@ -30,12 +31,13 @@ type Notification struct {
 
 }
 
-var mo *js.Object
+var instance *js.Object
 
-func init() {
-	goco.OnDeviceReady(func() {
-		mo = js.Global.Get("cordova").Get("plugins").Get("notification").Get("local")
-	})
+func mo() *js.Object {
+	if instance == nil {
+		instance = js.Global.Get("cordova").Get("plugins").Get("notification").Get("local")
+	}
+	return instance
 }
 
 // New returns new notification with default values
@@ -49,7 +51,7 @@ func HasPermission() (res bool) {
 	success := func(granted bool) {
 		ch <- granted
 	}
-	mo.Call("hasPermission", success)
+	mo().Call("hasPermission", success)
 	return <-ch
 }
 
@@ -59,7 +61,7 @@ func RegisterPermission() (res bool) {
 	success := func(granted bool) {
 		ch <- granted
 	}
-	mo.Call("registerPermission", success)
+	mo().Call("registerPermission", success)
 	return <-ch
 }
 
@@ -76,7 +78,7 @@ func Schedule(notif *Notification) {
 	success := func() {
 		close(ch)
 	}
-	mo.Call("schedule", notif, success)
+	mo().Call("schedule", notif, success)
 	<-ch
 }
 
@@ -86,7 +88,7 @@ func Update(notif *Notification) {
 	success := func() {
 		close(ch)
 	}
-	mo.Call("update", notif, success)
+	mo().Call("update", notif, success)
 	<-ch
 }
 
@@ -96,7 +98,7 @@ func Clear(id int) {
 	success := func() {
 		close(ch)
 	}
-	mo.Call("clear", id, success)
+	mo().Call("clear", id, success)
 	<-ch
 }
 
@@ -106,7 +108,7 @@ func ClearAll() {
 	success := func() {
 		close(ch)
 	}
-	mo.Call("clearAll", success)
+	mo().Call("clearAll", success)
 	<-ch
 }
 
@@ -116,7 +118,7 @@ func Cancel(id int) {
 	success := func() {
 		close(ch)
 	}
-	mo.Call("cancel", id, success)
+	mo().Call("cancel", id, success)
 	<-ch
 }
 
@@ -126,48 +128,48 @@ func CancelAll() {
 	success := func() {
 		close(ch)
 	}
-	mo.Call("cancelAll", success)
+	mo().Call("cancelAll", success)
 	<-ch
 }
 
 // OnSchedule registers a callback which is invoked when a local notification was scheduled.
 func OnSchedule(f func(*Notification, string)) {
-	mo.Call("on", "schedule", f)
+	mo().Call("on", "schedule", f)
 }
 
 // OnTrigger registers a callback which is invoked when a local notification was triggered.
 func OnTrigger(f func(*Notification, string)) {
-	mo.Call("on", "trigger", f)
+	mo().Call("on", "trigger", f)
 }
 
 // OnUpdate registers a callback which is invoked when a local notification was updated.
 func OnUpdate(f func(*Notification, string)) {
-	mo.Call("on", "update", f)
+	mo().Call("on", "update", f)
 }
 
 // OnClick registers a callback which is invoked when a local notification was clicked.
 func OnClick(f func(*Notification, string)) {
-	mo.Call("on", "click", f)
+	mo().Call("on", "click", f)
 }
 
 // OnClear registers a callback which is invoked when a local notification was cleared from the notification center.
 func OnClear(f func(*Notification, string)) {
-	mo.Call("on", "clear", f)
+	mo().Call("on", "clear", f)
 }
 
 // OnCancel registers a callback which is invoked when a local notification was canceled.
 func OnCancel(f func(*Notification, string)) {
-	mo.Call("on", "cancel", f)
+	mo().Call("on", "cancel", f)
 }
 
 // OnClearAll registers a callback which is invoked when all notifications were cleared from the notification center.
 func OnClearAll(f func(string)) {
-	mo.Call("on", "clearall", f)
+	mo().Call("on", "clearall", f)
 }
 
 // OnCancelAll registers a callback which is invoked when all local notification were canceled.
 func OnCancelAll(f func(string)) {
-	mo.Call("on", "cancelall", f)
+	mo().Call("on", "cancelall", f)
 }
 
 // IsPresent returns true if notification is still present in the notification center
@@ -176,7 +178,7 @@ func IsPresent(id int) (res bool) {
 	success := func(present bool) {
 		ch <- present
 	}
-	mo.Call("isPresent", id, success)
+	mo().Call("isPresent", id, success)
 	return <-ch
 }
 
@@ -187,7 +189,7 @@ func IsScheduled(id int) (res bool) {
 	success := func(present bool) {
 		ch <- present
 	}
-	mo.Call("isScheduled", id, success)
+	mo().Call("isScheduled", id, success)
 	return <-ch
 }
 
@@ -197,7 +199,7 @@ func IsTriggered(id int) (res bool) {
 	success := func(present bool) {
 		ch <- present
 	}
-	mo.Call("IsTriggered", id, success)
+	mo().Call("isTriggered", id, success)
 	return <-ch
 }
 
@@ -207,7 +209,7 @@ func GetAllIds() []int {
 	success := func(s []int) {
 		ch <- s
 	}
-	mo.Call("getAllIds", success)
+	mo().Call("getAllIds", success)
 	return <-ch
 }
 
@@ -217,7 +219,7 @@ func GetScheduledIds() []int {
 	success := func(s []int) {
 		ch <- s
 	}
-	mo.Call("getScheduledIds", success)
+	mo().Call("getScheduledIds", success)
 	return <-ch
 }
 
@@ -227,7 +229,7 @@ func GetTriggeredIds() []int {
 	success := func(s []int) {
 		ch <- s
 	}
-	mo.Call("getTriggeredIds", success)
+	mo().Call("getTriggeredIds", success)
 	return <-ch
 }
 
@@ -237,7 +239,7 @@ func GetAll() []*Notification {
 	success := func(s []*Notification) {
 		ch <- s
 	}
-	mo.Call("getAll", success)
+	mo().Call("getAll", success)
 	return <-ch
 }
 
@@ -247,6 +249,6 @@ func GetByID(id int) *Notification {
 	success := func(n *Notification) {
 		ch <- n
 	}
-	mo.Call("get", id, success)
+	mo().Call("get", id, success)
 	return <-ch
 }

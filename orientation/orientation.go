@@ -8,7 +8,6 @@ import (
 	"errors"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/jaracil/goco"
 )
 
 // Heading contains orientation values.
@@ -25,12 +24,13 @@ type Watcher struct {
 	*js.Object
 }
 
-var mo *js.Object
+var instance *js.Object
 
-func init() {
-	goco.OnDeviceReady(func() {
-		mo = js.Global.Get("navigator").Get("compass")
-	})
+func mo() *js.Object {
+	if instance == nil {
+		instance = js.Global.Get("navigator").Get("compass")
+	}
+	return instance
 }
 
 // CurrentHeading returns current device's heading.
@@ -45,7 +45,7 @@ func CurrentHeading() (heading *Heading, err error) {
 		close(ch)
 	}
 
-	mo.Call("getCurrentHeading", success, fail)
+	mo().Call("getCurrentHeading", success, fail)
 	<-ch
 	return
 }
@@ -61,11 +61,11 @@ func NewWatcher(cb func(*Heading, error), options map[string]interface{}) *Watch
 		cb(nil, err)
 	}
 
-	id := mo.Call("watchHeading", success, fail, options)
+	id := mo().Call("watchHeading", success, fail, options)
 	return &Watcher{Object: id}
 }
 
 // Close cancels tracking watcher
 func (w *Watcher) Close() {
-	mo.Call("clearWatch", w)
+	mo().Call("clearWatch", w)
 }

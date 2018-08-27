@@ -8,7 +8,6 @@ import (
 	"errors"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/jaracil/goco"
 )
 
 // AndroidCfg contains android platform specific configuration
@@ -91,12 +90,13 @@ type Push struct {
 	*js.Object
 }
 
-var mo *js.Object
+var instance *js.Object
 
-func init() {
-	goco.OnDeviceReady(func() {
-		mo = js.Global.Get("PushNotification")
-	})
+func mo() *js.Object {
+	if instance == nil {
+		instance = js.Global.Get("PushNotification")
+	}
+	return instance
 }
 
 // NewConfig returns new Config object with default values
@@ -110,7 +110,7 @@ func NewConfig() *Config {
 
 // New returns Push object. The cfg param is a config object returned by NewConfig and filled with valid data.
 func New(cfg *Config) *Push {
-	obj := mo.Call("init", cfg)
+	obj := mo().Call("init", cfg)
 	return &Push{Object: obj}
 }
 
@@ -121,7 +121,7 @@ func HasPermission() (res bool) {
 		res = obj.Get("isEnabled").Bool()
 		close(ch)
 	}
-	mo.Call("hasPermission", success)
+	mo().Call("hasPermission", success)
 	<-ch
 	return
 }

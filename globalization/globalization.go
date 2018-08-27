@@ -10,25 +10,25 @@ import (
 	"errors"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/jaracil/goco"
 )
 
-var mo *js.Object
+var instance *js.Object
 
-func init() {
-	goco.OnDeviceReady(func() {
-		mo = js.Global.Get("navigator").Get("globalization")
-	})
+func mo() *js.Object {
+	if instance == nil {
+		instance = js.Global.Get("navigator").Get("globalization")
+	}
+	return instance
 }
 
 // GetPreferredLanguage downloads an update
 func GetPreferredLanguage() (lang string, err error) {
-	if mo == nil {
+	if mo() == nil {
 		return "", errors.New("Cannot find navigator.globalization object")
 	}
 
 	ch := make(chan struct{})
-	mo.Call("getPreferredLanguage",
+	mo().Call("getPreferredLanguage",
 		func(cbLang *js.Object) {
 			lang = cbLang.Get("value").String()
 			close(ch)
