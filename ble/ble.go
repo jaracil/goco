@@ -56,7 +56,8 @@ func startScan(srv []string, cbFun func(*Peripheral), dups bool) {
 	}
 	scaning = true
 	options := map[string]interface{}{"reportDuplicates": dups}
-	mo().Call("startScanWithOptions", srv, options, func(p *Peripheral) {
+	mo().Call("startScanWithOptions", srv, options, func(obj *js.Object) {
+		p := NewPeripheral(obj)
 		p.Parse()
 		cbFun(p)
 	})
@@ -110,7 +111,7 @@ func Connect(id string, endConnCb func(per *Peripheral)) (per *Peripheral, err e
 	failure := func(obj *js.Object) {
 		if connected {
 			if endConnCb != nil {
-				endConnCb(&Peripheral{Object: obj})
+				endConnCb(NewPeripheral(obj))
 			}
 		} else {
 			err = errors.New("Error connecting to BLE peripheral")
