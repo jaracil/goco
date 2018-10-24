@@ -14,10 +14,19 @@ type AdvField struct {
 	Data []byte
 }
 
+type Characteristic struct {
+	*js.Object
+	Service        string      `js:"service"`
+	Characteristic string      `js:"characteristic"`
+	Properties     []string    `js:"properties"`
+	Descriptors    interface{} `js:"descriptors"`
+}
+
 type Peripheral struct {
 	*js.Object
-	serviceUUID string
-	vkID        string
+	serviceUUID     string
+	vkID            string
+	characteristics []Characteristic `js:"characteristics"`
 }
 
 func (p *Peripheral) Name() string {
@@ -42,6 +51,10 @@ func (p *Peripheral) ServiceUUID() string {
 
 func (p *Peripheral) VkID() string {
 	return p.vkID
+}
+
+func (p *Peripheral) Characteristics() []Characteristic {
+	return p.characteristics
 }
 
 func (p *Peripheral) Parse() {
