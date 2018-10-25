@@ -8,11 +8,6 @@ import (
 	"github.com/jaracil/goco/device"
 )
 
-type AdvField struct {
-	Type int
-	Data []byte
-}
-
 type Characteristic struct {
 	*js.Object
 	Service        string      `js:"service"`
