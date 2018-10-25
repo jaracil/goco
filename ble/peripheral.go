@@ -81,21 +81,28 @@ func (p *Peripheral) Parse() {
 }
 
 func (p *Peripheral) parseIOS() {
-	/*
-		uuids := p.Get("advertising").Get("kCBAdvDataServiceUUIDs")
-		if uuids.Length() > 0 {
-			p.serviceUUID = strings.ToLower(uuids.Index(0).String())
-		}
-		serviceData := p.Get("advertising").Get("kCBAdvDataServiceData")
-		if serviceData == nil {
-			return
-		}
-		vkIDBuffer := serviceData.Get("0000")
-		if vkIDBuffer == nil {
-			return
-		}
-		p.vkID = base64.StdEncoding.EncodeToString(js.Global.Get("Uint8Array").New(vkIDBuffer).Interface().([]byte))
-	*/
+	advertising := p.Get("advertising")
+
+	p.name = advertising.Get("kCBAdvDataLocalName").String()
+	p.txPowerLevel = advertising.Get("kCBAdvDataTxPowerLevel").Int()
+
+	for _, item := range advertising.Get("kCBAdvDataServiceUUIDs").Interface().([]interface{}) {
+		p.services = append(p.services, item.(string))
+	}
+
+	for _, key := range js.Keys(advertising.Get("kCBAdvDataServiceData")) {
+		buffer := advertising.Get("kCBAdvDataServiceData").Get(key)
+		data := js.Global.Get("Uint8Array").New(buffer).Interface().([]byte)
+		p.servicesData[key] = data
+	}
+
+	data := js.Global.Get("Uint8Array").New(advertising.Get("kCBAdvDataManufacturerData")).Interface().([]byte)
+
+	if len(data) >= 2 {
+		key := p.formatUUID(reverse(data[0:2]))
+		value := data[2:]
+		p.manufacturerData[key] = value
+	}
 }
 
 func (p *Peripheral) parseAndroid() {
