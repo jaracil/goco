@@ -151,8 +151,8 @@ func (p *Peripheral) parseAndroid() {
 			p.servicesData[key] = value
 			i += fieldLength
 		case 0xff:
-			key := p.formatUUID(arr[i : i+2])
-			value := arr[i+2 : i+fieldLength-2]
+			key := p.formatUUID(reverse(arr[i : i+2]))
+			value := arr[i+2 : i+2+fieldLength-2]
 			p.manufacturerData[key] = value
 			i += fieldLength
 		default:
