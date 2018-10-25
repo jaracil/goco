@@ -72,6 +72,18 @@ func (p *Peripheral) ServiceData(key string) []byte {
 	return p.servicesData[key]
 }
 
+func (p *Peripheral) Flags() int {
+	return p.flags
+}
+
+func (p *Peripheral) TxPowerLevel() int {
+	return p.txPowerLevel
+}
+
+func (p *Peripheral) ManufacturerData() map[string][]byte {
+	return p.manufacturerData
+}
+
 func (p *Peripheral) Parse() {
 	if device.DevInfo.Platform == "Android" {
 		p.parseAndroid()
