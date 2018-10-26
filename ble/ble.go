@@ -58,7 +58,6 @@ func startScan(srv []string, cbFun func(*Peripheral), dups bool) {
 	options := map[string]interface{}{"reportDuplicates": dups}
 	mo().Call("startScanWithOptions", srv, options, func(obj *js.Object) {
 		p := newPeripheral(obj)
-		p.Parse()
 		cbFun(p)
 	})
 }

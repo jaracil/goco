@@ -29,7 +29,7 @@ type Peripheral struct {
 }
 
 func newPeripheral(jsObj *js.Object) *Peripheral {
-	return &Peripheral{
+	per := &Peripheral{
 		Object:           jsObj,
 		services:         []string{},
 		servicesData:     map[string][]byte{},
@@ -37,6 +37,8 @@ func newPeripheral(jsObj *js.Object) *Peripheral {
 		unknown:          map[int][]byte{},
 		characteristics:  []Characteristic{},
 	}
+	per.parse()
+	return per
 }
 
 func (p *Peripheral) Name() string {
@@ -79,7 +81,7 @@ func (p *Peripheral) ManufacturerData() map[string][]byte {
 	return p.manufacturerData
 }
 
-func (p *Peripheral) Parse() {
+func (p *Peripheral) parse() {
 	if device.DevInfo.Platform == "Android" {
 		p.parseAndroid()
 	} else {
