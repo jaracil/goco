@@ -191,7 +191,7 @@ func (p *Peripheral) formatUUID(data []byte) string {
 	result := ""
 
 	for _, val := range data {
-		result += fmt.Sprintf("%02X", val)
+		result += fmt.Sprintf("%02x", val)
 	}
 
 	if len(result) == 32 {
