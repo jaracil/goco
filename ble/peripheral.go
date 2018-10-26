@@ -10,11 +10,10 @@ import (
 )
 
 type Characteristic struct {
-	*js.Object
-	Service        string      `js:"service"`
-	Characteristic string      `js:"characteristic"`
-	Properties     []string    `js:"properties"`
-	Descriptors    interface{} `js:"descriptors"`
+	Service        string
+	Characteristic string
+	Properties     []string
+	Descriptors    []map[string]interface{}
 }
 
 type Peripheral struct {
@@ -26,7 +25,7 @@ type Peripheral struct {
 	servicesData     map[string][]byte
 	manufacturerData map[string][]byte
 	unknown          map[int][]byte
-	characteristics  []Characteristic `js:"characteristics"`
+	characteristics  []Characteristic
 }
 
 func newPeripheral(jsObj *js.Object) *Peripheral {
@@ -38,7 +37,8 @@ func newPeripheral(jsObj *js.Object) *Peripheral {
 		unknown:          map[int][]byte{},
 		characteristics:  []Characteristic{},
 	}
-	per.parse()
+	per.parseAdvertising()
+	per.extractCharacteristics()
 	return per
 }
 
@@ -86,7 +86,37 @@ func (p *Peripheral) Unknown() map[int][]byte {
 	return p.unknown
 }
 
-func (p *Peripheral) parse() {
+func (p *Peripheral) extractCharacteristics() {
+	if p.Get("characteristics") == js.Undefined {
+		return
+	}
+
+	for _, item := range p.Get("characteristics").Interface().([]interface{}) {
+		jsChar := item.(map[string]interface{})
+		char := Characteristic{
+			Characteristic: jsChar["characteristic"].(string),
+			Service:        jsChar["service"].(string),
+			Properties:     []string{},
+			Descriptors:    []map[string]interface{}{},
+		}
+
+		if jsChar["properties"] != nil {
+			for _, prop := range jsChar["properties"].([]interface{}) {
+				char.Properties = append(char.Properties, prop.(string))
+			}
+		}
+
+		if jsChar["descriptors"] != nil {
+			for _, desc := range jsChar["descriptors"].([]interface{}) {
+				char.Descriptors = append(char.Descriptors, desc.(map[string]interface{}))
+			}
+		}
+
+		p.characteristics = append(p.characteristics, char)
+	}
+}
+
+func (p *Peripheral) parseAdvertising() {
 	if device.DevInfo.Platform == "Android" {
 		p.parseAndroid()
 	} else {

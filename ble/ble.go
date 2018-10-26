@@ -102,8 +102,8 @@ func Connect(id string, endConnCb func(per *Peripheral)) (per *Peripheral, err e
 	}
 	ch := make(chan struct{})
 	connected := false
-	success := func(p *Peripheral) {
-		per = p
+	success := func(obj *js.Object) {
+		per = newPeripheral(obj)
 		connected = true
 		close(ch)
 	}
