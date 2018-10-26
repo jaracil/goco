@@ -110,7 +110,7 @@ func Connect(id string, endConnCb func(per *Peripheral)) (per *Peripheral, err e
 	failure := func(obj *js.Object) {
 		if connected {
 			if endConnCb != nil {
-				endConnCb(newPeripheral(obj))
+				endConnCb(per)
 			}
 		} else {
 			err = errors.New("Error connecting to BLE peripheral")
