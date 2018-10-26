@@ -3,6 +3,7 @@ package ble
 import (
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/gopherjs/gopherjs/js"
 	"github.com/jaracil/goco/device"
@@ -100,13 +101,13 @@ func (p *Peripheral) parseIOS() {
 	p.txPowerLevel = advertising.Get("kCBAdvDataTxPowerLevel").Int()
 
 	for _, item := range advertising.Get("kCBAdvDataServiceUUIDs").Interface().([]interface{}) {
-		p.services = append(p.services, item.(string))
+		p.services = append(p.services, strings.ToLower(item.(string)))
 	}
 
 	for _, key := range js.Keys(advertising.Get("kCBAdvDataServiceData")) {
 		buffer := advertising.Get("kCBAdvDataServiceData").Get(key)
 		data := js.Global.Get("Uint8Array").New(buffer).Interface().([]byte)
-		p.servicesData[key] = data
+		p.servicesData[strings.ToLower(key)] = data
 	}
 
 	data := js.Global.Get("Uint8Array").New(advertising.Get("kCBAdvDataManufacturerData")).Interface().([]byte)
@@ -114,7 +115,7 @@ func (p *Peripheral) parseIOS() {
 	if len(data) >= 2 {
 		key := p.formatUUID(reverse(data[0:2]))
 		value := data[2:]
-		p.manufacturerData[key] = value
+		p.manufacturerData[strings.ToLower(key)] = value
 	}
 }
 
