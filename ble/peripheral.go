@@ -81,6 +81,10 @@ func (p *Peripheral) ManufacturerData() map[string][]byte {
 	return p.manufacturerData
 }
 
+func (p *Peripheral) Unknown() map[int][]byte {
+	return p.unknown
+}
+
 func (p *Peripheral) parse() {
 	if device.DevInfo.Platform == "Android" {
 		p.parseAndroid()
