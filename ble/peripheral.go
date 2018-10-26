@@ -28,7 +28,7 @@ type Peripheral struct {
 	characteristics  []Characteristic `js:"characteristics"`
 }
 
-func NewPeripheral(jsObj *js.Object) *Peripheral {
+func newPeripheral(jsObj *js.Object) *Peripheral {
 	return &Peripheral{
 		Object:           jsObj,
 		services:         []string{},
