@@ -127,25 +127,40 @@ func (p *Peripheral) parseAdvertising() {
 func (p *Peripheral) parseIOS() {
 	advertising := p.Get("advertising")
 
-	p.name = advertising.Get("kCBAdvDataLocalName").String()
-	p.txPowerLevel = advertising.Get("kCBAdvDataTxPowerLevel").Int()
-
-	for _, item := range advertising.Get("kCBAdvDataServiceUUIDs").Interface().([]interface{}) {
-		p.services = append(p.services, strings.ToLower(item.(string)))
+	rawName := advertising.Get("kCBAdvDataLocalName")
+	if rawName != js.Undefined {
+		p.name = rawName.String()
 	}
 
-	for _, key := range js.Keys(advertising.Get("kCBAdvDataServiceData")) {
-		buffer := advertising.Get("kCBAdvDataServiceData").Get(key)
-		data := js.Global.Get("Uint8Array").New(buffer).Interface().([]byte)
-		p.servicesData[strings.ToLower(key)] = data
+	rawPowerLevel := advertising.Get("kCBAdvDataTxPowerLevel")
+	if rawPowerLevel != js.Undefined {
+		p.txPowerLevel = rawPowerLevel.Int()
 	}
 
-	data := js.Global.Get("Uint8Array").New(advertising.Get("kCBAdvDataManufacturerData")).Interface().([]byte)
+	rawServices := advertising.Get("kCBAdvDataServiceUUIDs")
+	if rawServices != js.Undefined {
+		for _, item := range rawServices.Interface().([]interface{}) {
+			p.services = append(p.services, strings.ToLower(item.(string)))
+		}
+	}
 
-	if len(data) >= 2 {
-		key := p.formatUUID(reverse(data[0:2]))
-		value := data[2:]
-		p.manufacturerData[strings.ToLower(key)] = value
+	rawServicesData := advertising.Get("kCBAdvDataServiceData")
+	if rawServicesData != js.Undefined {
+		for _, key := range js.Keys(rawServicesData) {
+			buffer := rawServicesData.Get(key)
+			data := js.Global.Get("Uint8Array").New(buffer).Interface().([]byte)
+			p.servicesData[strings.ToLower(key)] = data
+		}
+	}
+
+	rawManufacturerData := advertising.Get("kCBAdvDataManufacturerData")
+	if rawManufacturerData != js.Undefined {
+		data := js.Global.Get("Uint8Array").New(rawManufacturerData).Interface().([]byte)
+		if len(data) >= 2 {
+			key := p.formatUUID(reverse(data[0:2]))
+			value := data[2:]
+			p.manufacturerData[strings.ToLower(key)] = value
+		}
 	}
 }
 
