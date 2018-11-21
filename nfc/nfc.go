@@ -8,6 +8,7 @@ package nfc
 
 import (
 	"fmt"
+	"log"
 
 	"bitbucket.org/garagemakers/virkey-cloud/frontend/utils"
 
@@ -59,6 +60,59 @@ func AddMimeTypeListener(mimeType string, callback func(*Tag)) (err error) {
 	}
 
 	moNFC().Call("addMimeTypeListener", mimeType, cb, success, fail)
+	<-ch
+	return
+}
+
+// AddNdefListener registers an event listener for any NDEF tag
+func AddNdefListener(callback func(*Tag)) (err error) {
+	ch := make(chan struct{})
+	success := func() {
+		close(ch)
+	}
+	fail := func(obj *js.Object) {
+		err = fmt.Errorf("Error registering NDEF listener: %s", utils.Stringify(obj))
+		close(ch)
+	}
+	cb := func(obj *js.Object) {
+		log.Printf("AddNdefListener cb")
+		tag := Tag{o: obj.Get("tag")}
+		callback(&tag)
+	}
+
+	moNFC().Call("addNdefListener", cb, success, fail)
+	<-ch
+	return
+}
+
+// BeginSession starts scanning for NFC tags (needed on iOS)
+func BeginSession() (err error) {
+	ch := make(chan struct{})
+	success := func() {
+		close(ch)
+	}
+	fail := func(obj *js.Object) {
+		err = fmt.Errorf("Error beggining NFC session: %s", utils.Stringify(obj))
+		close(ch)
+	}
+
+	moNFC().Call("beginSession", success, fail)
+	<-ch
+	return
+}
+
+// InvalidateSession stops scanning for NFC tags (needed on iOS)
+func InvalidateSession() (err error) {
+	ch := make(chan struct{})
+	success := func() {
+		close(ch)
+	}
+	fail := func(obj *js.Object) {
+		err = fmt.Errorf("Error stopping NFC session: %s", utils.Stringify(obj))
+		close(ch)
+	}
+
+	moNFC().Call("invalidateSession", success, fail)
 	<-ch
 	return
 }
