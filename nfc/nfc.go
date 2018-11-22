@@ -15,6 +15,20 @@ import (
 	"github.com/gopherjs/gopherjs/js"
 )
 
+// Status is the status of the NFC support
+type Status string
+
+const (
+	// NfcEnabled when NFC is enabled
+	NfcEnabled Status = "ENABLED"
+	// NoNfc the device doesn't support NFC
+	NoNfc Status = "NO_NFC"
+	// NfcDisabled if the user has disabled NFC
+	NfcDisabled Status = "NFC_DISABLED"
+	// NoNfcOrNfcDisabled when NFC is not present or disabled (on Windows)
+	NoNfcOrNfcDisabled Status = "NO_NFC_OR_NFC_DISABLED"
+)
+
 // Tag is an NFC tag
 type Tag struct {
 	o *js.Object
@@ -113,6 +127,39 @@ func InvalidateSession() (err error) {
 	}
 
 	moNFC().Call("invalidateSession", success, fail)
+	<-ch
+	return
+}
+
+// Enabled returns status of NFC
+func Enabled() (status Status) {
+	ch := make(chan struct{})
+	success := func() {
+		status = NfcEnabled
+		close(ch)
+	}
+	fail := func(value string) {
+		status = Status(value)
+		close(ch)
+	}
+
+	moNFC().Call("enabled", success, fail)
+	<-ch
+	return
+}
+
+// ShowSettings shows the NFC settings on the device
+func ShowSettings() (err error) {
+	ch := make(chan struct{})
+	success := func() {
+		close(ch)
+	}
+	fail := func(obj *js.Object) {
+		err = fmt.Errorf("Error showing settings: %s", utils.Stringify(obj))
+		close(ch)
+	}
+
+	moNFC().Call("showSettings", success, fail)
 	<-ch
 	return
 }
