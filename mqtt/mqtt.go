@@ -52,8 +52,10 @@ type SusbscribeObject struct {
 }
 
 var (
-	instance        *js.Object
-	connectedServer *Server
+	instance            *js.Object
+	connectedServer     *Server
+	subscribeTopicCh    = make(chan *SusbscribeObject)
+	subscribeTopicChRes = make(chan error)
 )
 
 func mo() *js.Object {
@@ -82,8 +84,10 @@ func Connect(url string, port int, clientID string) (err error) {
 		err = errors.New(obj.String())
 		close(ch)
 	}
+
 	mo().Call("connect", server)
 	<-ch
+	go subscribeTopicQueue()
 	return
 }
 
@@ -119,18 +123,22 @@ func SubscribeTopic(topic string, qos int, resFunc func(string)) error {
 	if connectedServer == nil {
 		return errors.New("No server connected")
 	}
-	if err := subscribeToTopic(topic, qos); err != nil {
+
+	subs := &SusbscribeObject{Object: js.Global.Get("Object").New()}
+	subs.Topic = topic
+	subs.Qos = qos
+
+	subscribeTopicCh <- subs
+	if err := <-subscribeTopicChRes; err != nil {
 		return err
 	}
 	mo().Call("listen", topic, resFunc)
 	return nil
 }
 
-func subscribeToTopic(topic string, qos int) (err error) {
+func subscribeToTopic(subs *SusbscribeObject) (err error) {
 	ch := make(chan error)
-	subs := &SusbscribeObject{Object: js.Global.Get("Object").New()}
-	subs.Topic = topic
-	subs.Qos = qos
+
 	subs.Success = func(obj *js.Object) {
 		close(ch)
 	}
@@ -138,10 +146,16 @@ func subscribeToTopic(topic string, qos int) (err error) {
 		err = errors.New(obj.String())
 		close(ch)
 	}
+
 	mo().Call("subscribe", subs)
 	<-ch
 	return
+}
 
+func subscribeTopicQueue() {
+	for subscriber := range subscribeTopicCh {
+		subscribeTopicChRes <- subscribeToTopic(subscriber)
+	}
 }
 
 // Publish sends the data from payload to the topic passed as a parameter on the connected server
