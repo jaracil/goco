@@ -1,4 +1,4 @@
-// Package mqtt is a GopherJS wrapper for 'CordovaMqTTPlugin'
+// Package mqtt is a GopherJS wrapper for 'CordovaMqTTPlugin'.
 //
 // Install plugin:
 // 	cordova plugin add cordova-plugin-mqtt
