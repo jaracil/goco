@@ -10,8 +10,6 @@ import (
 	"fmt"
 	"log"
 
-	"bitbucket.org/garagemakers/virkey-cloud/frontend/utils"
-
 	"github.com/gopherjs/gopherjs/js"
 )
 
@@ -37,6 +35,10 @@ type Tag struct {
 // GetURL returns tag's URL
 func (t *Tag) GetURL() string {
 	return moNDEF().Get("uriHelper").Call("decodePayload", t.o.Get("ndefMessage").Index(0).Get("payload")).String()
+}
+
+func stringify(obj *js.Object) string {
+	return js.Global.Get("JSON").Call("stringify", obj).String()
 }
 
 var instanceNFC *js.Object
@@ -65,7 +67,7 @@ func AddMimeTypeListener(mimeType string, callback func(*Tag)) (err error) {
 		close(ch)
 	}
 	fail := func(obj *js.Object) {
-		err = fmt.Errorf("Error registering mimetype listener: %s", utils.Stringify(obj))
+		err = fmt.Errorf("Error registering mimetype listener: %s", stringify(obj))
 		close(ch)
 	}
 	cb := func(obj *js.Object) {
@@ -85,7 +87,7 @@ func AddNdefListener(callback func(*Tag)) (err error) {
 		close(ch)
 	}
 	fail := func(obj *js.Object) {
-		err = fmt.Errorf("Error registering NDEF listener: %s", utils.Stringify(obj))
+		err = fmt.Errorf("Error registering NDEF listener: %s", stringify(obj))
 		close(ch)
 	}
 	cb := func(obj *js.Object) {
@@ -106,7 +108,7 @@ func BeginSession() (err error) {
 		close(ch)
 	}
 	fail := func(obj *js.Object) {
-		err = fmt.Errorf("Error beggining NFC session: %s", utils.Stringify(obj))
+		err = fmt.Errorf("Error beggining NFC session: %s", stringify(obj))
 		close(ch)
 	}
 
@@ -122,7 +124,7 @@ func InvalidateSession() (err error) {
 		close(ch)
 	}
 	fail := func(obj *js.Object) {
-		err = fmt.Errorf("Error stopping NFC session: %s", utils.Stringify(obj))
+		err = fmt.Errorf("Error stopping NFC session: %s", stringify(obj))
 		close(ch)
 	}
 
@@ -155,7 +157,7 @@ func ShowSettings() (err error) {
 		close(ch)
 	}
 	fail := func(obj *js.Object) {
-		err = fmt.Errorf("Error showing settings: %s", utils.Stringify(obj))
+		err = fmt.Errorf("Error showing settings: %s", stringify(obj))
 		close(ch)
 	}
 
