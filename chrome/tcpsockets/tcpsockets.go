@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -225,8 +224,7 @@ func (c conn) Write(b []byte) (n int, err error) {
 }
 
 func (c conn) Read(receive []byte) (n int, err error) {
-	n, err = c.readPipe.r.Read(receive)
-	return n, errors.Wrap(err, ErrPipeReadFailed.Error())
+	return c.readPipe.r.Read(receive)
 }
 
 func (c conn) LocalAddr() net.Addr  { return addr{} }
