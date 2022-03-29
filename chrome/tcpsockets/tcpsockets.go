@@ -11,6 +11,7 @@
 package tcpsockets
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
